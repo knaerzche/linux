@@ -264,7 +264,7 @@ static struct rockchip_clk_branch rk3036_clk_branches[] __initdata = {
 	FACTOR_GATE(HCLK_VCODEC, "hclk_vcodec", "aclk_vcodec", 0, 1, 4,
 			RK2928_CLKGATE_CON(3), 12, GFLAGS),
 
-	COMPOSITE(0, "aclk_hvec", mux_pll_src_3plls_p, 0,
+	COMPOSITE(ACLK_HEVC, "aclk_hevc", mux_pll_src_3plls_p, 0,
 			RK2928_CLKSEL_CON(20), 0, 2, MFLAGS, 2, 5, DFLAGS,
 			RK2928_CLKGATE_CON(10), 6, GFLAGS),
 
