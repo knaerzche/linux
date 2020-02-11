@@ -786,8 +786,7 @@
 			<&cru SCLK_RTC32K>, <&cru SCLK_UART0>,
 			<&cru SCLK_UART1>, <&cru SCLK_UART2>,
 			<&cru ACLK_BUS_PRE>, <&cru ACLK_PERI_PRE>,
-			<&cru ACLK_VIO_PRE>, <&cru ACLK_RGA_PRE>,
-			<&cru ACLK_VOP_PRE>, <&cru ACLK_RKVDEC_PRE>,
+			<&cru ACLK_RGA_PRE>, <&cru ACLK_RKVDEC_PRE>,
 			<&cru ACLK_RKVENC>, <&cru ACLK_VPU_PRE>,
 			<&cru SCLK_VDEC_CABAC>, <&cru SCLK_VDEC_CORE>,
 			<&cru SCLK_VENC_CORE>, <&cru SCLK_VENC_DSP>,
@@ -797,7 +796,15 @@
 			<&cru ACLK_BUS_PRE>, <&cru HCLK_BUS_PRE>,
 			<&cru PCLK_BUS_PRE>, <&cru ACLK_PERI_PRE>,
 			<&cru HCLK_PERI>, <&cru PCLK_PERI>,
-			<&cru SCLK_RTC32K>;
+			<&cru ACLK_VIO_PRE>, <&cru HCLK_VIO_PRE>,
+			<&cru ACLK_RGA_PRE>, <&cru SCLK_RGA>,
+			<&cru ACLK_VOP_PRE>, <&cru ACLK_RKVDEC_PRE>,
+			<&cru ACLK_RKVENC>, <&cru ACLK_VPU_PRE>,
+			<&cru SCLK_VDEC_CABAC>, <&cru SCLK_VDEC_CORE>,
+			<&cru SCLK_VENC_CORE>, <&cru SCLK_VENC_DSP>,
+			<&cru SCLK_EFUSE>, <&cru PCLK_DDR>,
+			<&cru ACLK_GMAC>, <&cru PCLK_GMAC>,
+			<&cru SCLK_RTC32K>, <&cru SCLK_USB3OTG_SUSPEND>;
 		assigned-clock-parents =
 			<&cru HDMIPHY>, <&cru PLL_APLL>,
 			<&cru PLL_GPLL>, <&xin24m>,
@@ -808,7 +815,6 @@
 			<24000000>, <24000000>,
 			<15000000>, <15000000>,
 			<100000000>, <100000000>,
-			<100000000>, <100000000>,
 			<50000000>, <100000000>,
 			<100000000>, <100000000>,
 			<50000000>, <50000000>,
@@ -818,7 +824,15 @@
 			<150000000>, <75000000>,
 			<75000000>, <150000000>,
 			<75000000>, <75000000>,
-			<32768>;
+			<300000000>, <100000000>,
+			<300000000>, <200000000>,
+			<400000000>, <500000000>,
+			<200000000>, <300000000>,
+			<300000000>, <250000000>,
+			<200000000>, <100000000>,
+			<24000000>, <100000000>,
+			<150000000>, <50000000>,
+			<32768>, <32768>;
 	};
 
 	usb2phy_grf: syscon@ff450000 {
