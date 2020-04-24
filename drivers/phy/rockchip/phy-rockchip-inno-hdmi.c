@@ -237,6 +237,9 @@ struct inno_hdmi_phy {
 	struct clk *refoclk;
 	struct clk *refpclk;
 
+	/* phy_flag flag */
+	bool phy_flag;
+
 	/* platform data */
 	const struct inno_hdmi_phy_drv_data *plat_data;
 	int chip_version;
@@ -347,6 +350,7 @@ static const struct pre_pll_config pre_pll_cfg_table[] = {
 static const struct post_pll_config post_pll_cfg_table[] = {
 	{33750000,  1, 40, 8, 1},
 	{33750000,  1, 80, 8, 2},
+	{33750000,  1, 10, 2, 4},
 	{74250000,  1, 40, 8, 1},
 	{74250000, 18, 80, 8, 2},
 	{148500000, 2, 40, 4, 3},
@@ -497,8 +501,11 @@ static int inno_hdmi_phy_power_on(struct phy *phy)
 		return -EINVAL;
 
 	for (; cfg->tmdsclock != 0; cfg++)
-		if (tmdsclock <= cfg->tmdsclock &&
-		    cfg->version & inno->chip_version)
+		if (((!inno->phy_flag || tmdsclock > 33750000)
+		     && tmdsclock <= cfg->tmdsclock
+		     && cfg->version & inno->chip_version) ||
+		    (inno->phy_flag && tmdsclock <= 33750000
+		     && cfg->version & 4))
 			break;
 
 	for (; phy_cfg->tmdsclock != 0; phy_cfg++)
@@ -909,6 +916,10 @@ static int inno_hdmi_phy_clk_register(struct inno_hdmi_phy *inno)
 
 static int inno_hdmi_phy_rk3228_init(struct inno_hdmi_phy *inno)
 {
+	struct nvmem_cell *cell;
+	unsigned char *efuse_buf;
+	size_t len;
+
 	/*
 	 * Use phy internal register control
 	 * rxsense/poweron/pllpd/pdataen signal.
@@ -923,7 +934,28 @@ static int inno_hdmi_phy_rk3228_init(struct inno_hdmi_phy *inno)
 	inno_update_bits(inno, 0xaa, RK3228_POST_PLL_CTRL_MANUAL,
 			 RK3228_POST_PLL_CTRL_MANUAL);
 
+
 	inno->chip_version = 1;
+	inno->phy_flag = false;
+
+	cell = nvmem_cell_get(inno->dev, "hdmi-phy-flag");
+	if (IS_ERR(cell)) {
+		if (PTR_ERR(cell) == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+
+		return 0;
+	}
+
+	efuse_buf = nvmem_cell_read(cell, &len);
+	nvmem_cell_put(cell);
+
+	if (IS_ERR(efuse_buf))
+		return 0;
+	if (len == 1)
+		inno->phy_flag = (efuse_buf[0] & BIT(1)) ? true : false;
+	kfree(efuse_buf);
+
+	dev_info(inno->dev, "phy_flag is: %d\n", inno->phy_flag);
 
 	return 0;
 }
@@ -1023,6 +1055,8 @@ static int inno_hdmi_phy_rk3328_init(struct inno_hdmi_phy *inno)
 
 	/* try to read the chip-version */
 	inno->chip_version = 1;
+	inno->phy_flag = false;
+
 	cell = nvmem_cell_get(inno->dev, "cpu-version");
 	if (IS_ERR(cell)) {
 		if (PTR_ERR(cell) == -EPROBE_DEFER)
