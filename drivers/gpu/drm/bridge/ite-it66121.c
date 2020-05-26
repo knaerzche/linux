@@ -242,6 +242,11 @@ static const struct it66121_conf it66121_conf_simple = {
 	.input_conversion_reg = IT66121_INPUT_CSC_NO_CONV,
 };
 
+static const struct it66121_conf it66121fn_conf_simple = {
+	.input_mode_reg = IT66121_INPUT_MODE_RGB,
+	.input_conversion_reg = IT66121_INPUT_CSC_NO_CONV,
+};
+
 static void it66121_hw_reset(struct it66121_ctx *ctx)
 {
 	gpiod_set_value(ctx->gpio_reset, 1);
@@ -969,6 +974,9 @@ static int it66121_remove(struct i2c_client *client)
 static const struct of_device_id it66121_dt_match[] = {
 	{ .compatible = "ite,it66121",
 	  .data = &it66121_conf_simple,
+	},
+	{ .compatible = "ite,it66121fn",
+	  .data = &it66121fn_conf_simple,
 	},
 	{ },
 };
