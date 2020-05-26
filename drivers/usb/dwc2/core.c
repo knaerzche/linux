@@ -663,7 +663,7 @@ void dwc2_force_dr_mode(struct dwc2_hsotg *hsotg)
 		 * platforms on their host-only dwc2.
 		 */
 		if (!dwc2_hw_is_otg(hsotg))
-			msleep(50);
+			msleep(200);
 
 		break;
 	case USB_DR_MODE_PERIPHERAL:
