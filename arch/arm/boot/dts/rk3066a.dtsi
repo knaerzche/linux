@@ -194,6 +194,19 @@
 		};
 	};
 
+	vpu: video-codec@10104000 {
+		compatible = "rockchip,rk3188-vpu";
+		reg = <0x10104000 0x800>;
+		interrupts = <GIC_SPI  9 IRQ_TYPE_LEVEL_HIGH>,
+                             <GIC_SPI 10 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "vepu", "vdpu";
+		clocks = <&cru ACLK_VDPU>, <&cru HCLK_VDPU>,
+		         <&cru ACLK_VEPU>, <&cru HCLK_VEPU>;
+		clock-names = "aclk_vdpu", "hclk_vdpu",
+		              "aclk_vepu", "hclk_vepu";
+		power-domains = <&power RK3066_PD_VIDEO>;
+	};
+
 	vop0: vop@1010c000 {
 		compatible = "rockchip,rk3066-vop";
 		reg = <0x1010c000 0x19c>;
