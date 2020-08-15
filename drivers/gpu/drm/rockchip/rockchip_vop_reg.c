@@ -555,6 +555,7 @@ static const struct vop_common rk3188_common = {
 	.dither_up = VOP_REG(RK3188_DSP_CTRL0, 0x1, 9),
 	.dsp_lut_en = VOP_REG(RK3188_SYS_CTRL, 0x1, 28),
 	.data_blank = VOP_REG(RK3188_DSP_CTRL1, 0x1, 25),
+	.dsp_data_swap = VOP_REG(RK3188_DSP_CTRL1, 0x1f, 26),
 };
 
 static const struct vop_win_data rk3188_vop_win_data[] = {
