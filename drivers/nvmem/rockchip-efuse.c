@@ -17,6 +17,8 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 
+#define RK3066_A_MASK		0xff
+
 #define RK3288_A_SHIFT		6
 #define RK3288_A_MASK		0x3ff
 #define RK3288_PGENB		BIT(3)
@@ -51,6 +53,51 @@ struct rockchip_efuse_chip {
 	void __iomem *base;
 	struct clk *clk;
 };
+
+static int rockchip_rk3066_efuse_read(void *context, unsigned int offset,
+				      void *val, size_t bytes)
+{
+	struct rockchip_efuse_chip *efuse = context;
+	u8 *buf = val;
+	int ret;
+
+	ret = clk_prepare_enable(efuse->clk);
+	if (ret < 0) {
+		dev_err(efuse->dev, "failed to prepare/enable efuse clk\n");
+		return ret;
+	}
+
+	writel(RK3288_CSB, efuse->base + REG_EFUSE_CTRL);
+	writel(RK3288_LOAD | RK3288_PGENB, efuse->base + REG_EFUSE_CTRL);
+	udelay(2);
+
+	while (bytes--) {
+		writel(readl(efuse->base + REG_EFUSE_CTRL) &
+			     (~(RK3066_A_MASK << RK3288_A_SHIFT)),
+			     efuse->base + REG_EFUSE_CTRL);
+		writel(readl(efuse->base + REG_EFUSE_CTRL) |
+			     ((offset++ & RK3066_A_MASK) << RK3288_A_SHIFT),
+			     efuse->base + REG_EFUSE_CTRL);
+		udelay(2);
+		writel(readl(efuse->base + REG_EFUSE_CTRL) |
+			     RK3288_STROBE, efuse->base + REG_EFUSE_CTRL);
+		udelay(2);
+
+		*buf++ = readl(efuse->base + REG_EFUSE_DOUT);
+		writel(readl(efuse->base + REG_EFUSE_CTRL) &
+		       (~RK3288_STROBE), efuse->base + REG_EFUSE_CTRL);
+		udelay(2);
+	}
+
+	udelay(2);
+	/* Switch to standby mode */
+	writel(RK3288_PGENB | RK3288_CSB, efuse->base + REG_EFUSE_CTRL);
+	udelay(1);
+
+	clk_disable_unprepare(efuse->clk);
+
+	return 0;
+}
 
 static int rockchip_rk3288_efuse_read(void *context, unsigned int offset,
 				      void *val, size_t bytes)
@@ -218,11 +265,11 @@ static const struct of_device_id rockchip_efuse_match[] = {
 	},
 	{
 		.compatible = "rockchip,rk3066a-efuse",
-		.data = (void *)&rockchip_rk3288_efuse_read,
+		.data = (void *)&rockchip_rk3066_efuse_read,
 	},
 	{
 		.compatible = "rockchip,rk3188-efuse",
-		.data = (void *)&rockchip_rk3288_efuse_read,
+		.data = (void *)&rockchip_rk3066_efuse_read,
 	},
 	{
 		.compatible = "rockchip,rk3228-efuse",
