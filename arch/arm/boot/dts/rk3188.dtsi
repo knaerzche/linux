@@ -99,6 +99,35 @@
 		ports = <&vop0_out>, <&vop1_out>;
 	};
 
+	gpu_opp_table: opp-table2 {
+		compatible = "operating-points-v2";
+
+		opp-133000000 {
+			opp-hz = /bits/ 64 <133000000>;
+			opp-microvolt = <975000>;
+		};
+		opp-200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <1000000>;
+		};
+		opp-266000000 {
+			opp-hz = /bits/ 64 <266000000>;
+			opp-microvolt = <1025000>;
+		};
+		opp-300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <1050000>;
+		};
+		opp-400000000 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-microvolt = <1100000>;
+		};
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <1250000>;
+		};
+	};
+
 	sram: sram@10080000 {
 		compatible = "mmio-sram";
 		reg = <0x10080000 0x8000>;
@@ -659,6 +688,7 @@
 			  "ppmmu2",
 			  "pp3",
 			  "ppmmu3";
+	operating-points-v2 = <&gpu_opp_table>;
 	power-domains = <&power RK3188_PD_GPU>;
 };
 
