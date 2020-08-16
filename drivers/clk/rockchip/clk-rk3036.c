@@ -410,7 +410,7 @@ static struct rockchip_clk_branch rk3036_clk_branches[] __initdata = {
 
 	/* pclk_peri gates */
 	GATE(0, "pclk_peri_matrix", "pclk_peri", CLK_IGNORE_UNUSED, RK2928_CLKGATE_CON(4), 1, GFLAGS),
-	GATE(0, "pclk_efuse", "pclk_peri", CLK_IGNORE_UNUSED, RK2928_CLKGATE_CON(5), 2, GFLAGS),
+	GATE(PCLK_EFUSE, "pclk_efuse", "pclk_peri", CLK_IGNORE_UNUSED, RK2928_CLKGATE_CON(5), 2, GFLAGS),
 	GATE(PCLK_TIMER, "pclk_timer", "pclk_peri", 0, RK2928_CLKGATE_CON(7), 7, GFLAGS),
 	GATE(PCLK_PWM, "pclk_pwm", "pclk_peri", 0, RK2928_CLKGATE_CON(7), 10, GFLAGS),
 	GATE(PCLK_SPI, "pclk_spi", "pclk_peri", 0, RK2928_CLKGATE_CON(7), 12, GFLAGS),
