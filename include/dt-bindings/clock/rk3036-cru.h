@@ -79,6 +79,7 @@
 #define PCLK_DDRUPCTL		364
 #define PCLK_WDT		368
 #define PCLK_ACODEC		369
+#define PCLK_EFUSE		370
 
 /* hclk gates */
 #define HCLK_OTG0		449
