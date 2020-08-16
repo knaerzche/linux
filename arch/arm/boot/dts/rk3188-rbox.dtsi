@@ -1,0 +1,452 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Alex Bee <knaerzche@gmail.com>
+ */
+
+/dts-v1/;
+#include <dt-bindings/input/input.h>
+#include "rk3188.dtsi"
+
+/ {
+	hdmi-out {
+		compatible = "hdmi-connector";
+		type = "c";
+
+		port {
+			hdmi_con_out: endpoint {
+				remote-endpoint = <&it66121_out>;
+			};
+		};
+	};
+
+	hdmi-sound {
+                compatible = "simple-audio-card";
+                simple-audio-card,name = "HDMI";
+                simple-audio-card,format = "i2s";
+                simple-audio-card,mclk-fs = <128>;
+
+                simple-audio-card,cpu {
+                        sound-dai = <&i2s0>;
+                };
+
+                simple-audio-card,codec {
+                        sound-dai = <&it66121>;
+                };
+        };
+
+	ir_recv: gpio-ir-receiver {
+		compatible = "gpio-ir-receiver";
+		gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&ir_recv_pin>;
+	};
+
+	spdif-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "SPDIF";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		simple-audio-card,dai-link@0 {
+			reg = <0>;
+			cpu {
+				sound-dai = <&spdif>;
+			};
+			codec {
+				sound-dai = <&spdif_dit>;
+			};
+		};
+	};
+
+	spdif_dit: spdif-dit {
+		compatible = "linux,spdif-dit";
+		#sound-dai-cells = <0>;
+	};
+
+
+	vcc_host: usb-host-regulator {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&host_vbus_drv>;
+		regulator-name = "host-pwr";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
+
+	vcc_sd0: sdmmc-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "sdmmc-supply";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio3 RK_PA1 GPIO_ACTIVE_LOW>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdmmc_pwr>;
+		startup-delay-us = <100000>;
+		vin-supply = <&vcc_io>;
+	};
+
+	vsys: vsys-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vsys";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-boot-on;
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&vdd_arm>;
+};
+
+&cpu1 {
+	cpu-supply = <&vdd_arm>;
+};
+
+&cpu2 {
+	cpu-supply = <&vdd_arm>;
+};
+
+&cpu3 {
+	cpu-supply = <&vdd_arm>;
+};
+
+&cru {
+
+	assigned-clocks = <&cru PLL_GPLL>, <&cru PLL_CPLL>,
+			  <&cru ACLK_CPU>,
+			  <&cru HCLK_CPU>, <&cru PCLK_CPU>,
+			  <&cru ACLK_PERI>, <&cru HCLK_PERI>,
+			  <&cru PCLK_PERI>, <&cru ACLK_LCDC0>,
+			  <&cru ACLK_LCDC1>;
+	assigned-clock-rates = <594000000>, <600000000>,
+			       <297000000>,
+			       <148500000>, <74250000>,
+			       <297000000>, <148500000>,
+			       <74250000>, <297000000>,
+			       <297000000>;
+};
+
+&gpu {
+	assigned-clocks = <&cru ACLK_GPU>;
+	assigned-clock-rates = <200000000>;
+	assigned-clocks-parent = <&cru PLL_CPLL>;
+	mali-supply = <&vdd_log>;
+	status = "okay";
+};
+
+/*
+ * since vdd_log also supplies other SoC components which
+ * do not have a devfreq driver (yet), we have to make sure,
+ * voltage is at least 1050000 mV
+ */
+
+&gpu_opp_table {
+	opp-133000000 {
+		opp-microvolt = <1050000>;
+	};
+	opp-200000000 {
+		opp-microvolt = <1050000>;
+	};
+	opp-266000000 {
+		opp-microvolt = <1050000>;
+	};
+};
+
+&i2c1 {
+	clock-frequency = <400000>;
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	pcf8563: rtc@51 {
+		compatible = "nxp,pcf8563";
+		reg = <0x51>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PB5 IRQ_TYPE_EDGE_FALLING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&rtc_int>;
+		#clock-cells = <0>;
+		clock-output-names = "xin32k";
+	};
+
+	act8846: act8846@5a {
+		compatible = "active-semi,act8846";
+		reg = <0x5a>;
+		status = "okay";
+		system-power-controller;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&dvs0_ctl &pmic_int &power_on>;
+
+		vp1-supply = <&vsys>;
+		vp2-supply = <&vsys>;
+		vp3-supply = <&vsys>;
+		vp4-supply = <&vsys>;
+		inl1-supply = <&vcc_io>;
+		inl2-supply = <&vsys>;
+		inl3-supply = <&vsys>;
+
+		regulators {
+			vcc_ddr: REG1 {
+				regulator-name = "VCC_DDR";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1200000>;
+				regulator-always-on;
+			};
+
+			vdd_log: REG2 {
+				regulator-name = "VDD_LOG";
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <1250000>;
+				regulator-always-on;
+			};
+
+			vdd_arm: REG3 {
+				regulator-name = "VDD_ARM";
+				regulator-min-microvolt = <875000>;
+				regulator-max-microvolt = <1350000>;
+				regulator-always-on;
+			};
+
+			vcc_io: REG4 {
+				regulator-name = "VCC_IO";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+			};
+
+			vdd_10: REG5 {
+				regulator-name = "VDD_10";
+				regulator-min-microvolt = <1000000>;
+				regulator-max-microvolt = <1000000>;
+				regulator-always-on;
+			};
+
+			vdd_hdmi: REG6 {
+				regulator-name = "VDD_HDMI";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1200000>;
+				regulator-always-on;
+			};
+
+			vcc18: REG7 {
+				regulator-name = "VCC_18";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-always-on;
+			};
+
+			vcca_33: REG8 {
+				regulator-name = "VCCA_33";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-always-on;
+			};
+
+			vcc_rmii: REG9 {
+				regulator-name = "VCC_RMII";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+			};
+
+			vccio_wl: REG10 {
+				regulator-name = "VCCIO_WL";
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+			};
+
+			vcc_18: REG11 {
+				regulator-name = "VCC18_IO";
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-always-on;
+			};
+
+			vcc28: REG12 {
+				regulator-name = "VCC_28";
+				regulator-min-microvolt = <2800000>;
+				regulator-max-microvolt = <2800000>;
+				regulator-always-on;
+			};
+		};
+	};
+};
+
+&i2c2 {
+	clock-frequency = <400000>;
+	status = "okay";
+
+	it66121: it-66121@4c {
+		compatible = "ite,it66121fn";
+		pinctrl-names = "default";
+		pinctrl-0 = <&hdmi_rst &it66121_int>;
+		vcn33-supply = <&vcca_33>;
+		vcn18-supply = <&vcc_18>;
+		vrf12-supply = <&vdd_hdmi>;
+		reset-gpios = <&gpio2 RK_PB2 GPIO_ACTIVE_HIGH>;
+		interrupt-parent = <&gpio2>;
+		interrupts = <RK_PD6 IRQ_TYPE_EDGE_FALLING>;
+		reg = <0x4c>;
+		#sound-dai-cells = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				reg = <0>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				it66121_in: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&vop1_out_rgb24>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				it66121_out: endpoint@0 {
+					reg = <0>;
+					remote-endpoint = <&hdmi_con_out>;
+				};
+			};
+		};
+	};
+};
+
+&i2s0 {
+	status = "okay";
+};
+
+&mmc0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&sd0_clk>, <&sd0_cmd>,
+		    <&sd0_cd>, <&sd0_bus4>;
+	vmmc-supply = <&vcc_sd0>;
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+};
+
+&pinctrl {
+	pcfg_output_high: pcfg-output-high {
+		output-high;
+	};
+
+	pcfg_output_low: pcfg-output-low {
+		output-low;
+	};
+
+	pcfg_pull_default: pcfg_pull_default {
+		bias-pull-pin-default;
+	};
+
+	pcfg_pull_none_12ma: pcfg-pull-none-12ma {
+		bias-disable;
+		drive-strength = <12>;
+	};
+
+	act8846 {
+		dvs0_ctl: act8846-dvs0-ctl {
+			rockchip,pins = <3 RK_PD3 RK_FUNC_GPIO &pcfg_output_low>;
+		};
+
+		pmic_int: pmic-int {
+			rockchip,pins = <0 RK_PB3 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	keys {
+		pwr_hold: pwr-hold {
+			rockchip,pins = <0 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	hdmi {
+		it66121_int: hdmi-int {
+			rockchip,pins = <2 RK_PD6 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+		hdmi_rst: hdmi-rst {
+			rockchip,pins = <3 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	ir-receiver {
+		ir_recv_pin: ir-recv-pin {
+			rockchip,pins = <0 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	pcf8563 {
+		rtc_int: rtc-int {
+			rockchip,pins = <0 RK_PB5 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	power {
+		power_on: power-on {
+			rockchip,pins = <0 RK_PA0 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
+	sd0 {
+		sdmmc_pwr: sdmmc-pwr {
+			rockchip,pins = <3 RK_PA1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	usb {
+		host_vbus_drv: host-vbus-drv {
+			rockchip,pins = <0 RK_PA3 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&spdif {
+	status = "okay";
+};
+
+&uart2 {
+	status = "okay";
+};
+
+&usbphy {
+	status = "okay";
+};
+
+&usbphy1 {
+	vbus-supply = <&vcc_host>;
+};
+
+&usb_otg {
+        status = "okay";
+};
+
+&usb_host {
+	status = "okay";
+};
+
+&vop1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&lcdc1_dclk &lcdc1_den &lcdc1_hsync
+		     &lcdc1_vsync &lcdc1_rgb24>;
+	status = "okay";
+};
+
+&vop1_out {
+	vop1_out_rgb24: endpoint@0 {
+		reg = <0>;
+		remote-endpoint = <&it66121_in>;
+	};
+};
+
+&wdt {
+	status = "okay";
+};

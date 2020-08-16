@@ -1,0 +1,170 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2020 Alex Bee <knaerzche@gmail.com>
+ */
+
+/dts-v1/;
+#include <dt-bindings/input/input.h>
+#include "rk3188-rbox.dtsi"
+
+/ {
+	model = "RK3188T CS968";
+
+	memory@60000000 {
+                device_type = "memory";
+                reg = <0x60000000 0x80000000>;
+        };
+
+	gpio-keys {
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_int>;
+		compatible = "gpio-keys";
+		autorepeat;
+
+
+		wake_on_usb: wake-on-usb {
+			label = "Wake-on-USB";
+			gpios = <&gpio0 RK_PA7 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WAKEUP>;
+			wakeup-source;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		blue {
+			label = "blue";
+			gpios = <&gpio0 RK_PB6 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		sleep {
+			label = "red";
+			gpios = <&gpio0 RK_PB7 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+		};
+	};
+
+
+	sdio_pwrseq: sdio-pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		clocks = <&pcf8563>;
+		clock-names = "ext_clock";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_reg_on>;
+		reset-gpios = <&gpio3 RK_PD0 GPIO_ACTIVE_LOW>;
+	};
+
+	vcc_otg: usb-otg-regulator {
+		compatible = "regulator-fixed";
+		enable-active-high;
+		gpio = <&gpio3 RK_PD5 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&otg_vbus_drv>;
+		regulator-name = "otg-vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+	};
+
+};
+
+&mmc1 {
+	bus-width = <4>;
+	clock-frequency = <25000000>;
+	mmc-pwrseq = <&sdio_pwrseq>;
+	non-removable;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sd1_clk>, <&sd1_cmd>,
+		    <&sd1_bus4>;
+	vmmc-supply = <&vcc_io>;
+	vqmmc-supply = <&vccio_wl>;
+	cap-sd-highspeed;
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	brcmf: wifi@1 {
+		reg = <0x1>;
+		compatible = "brcm,bcm4329-fmac";
+		interrupt-parent = <&gpio3>;
+		interrupts = <RK_PD2 GPIO_ACTIVE_HIGH>;
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_host_wake>;
+	};
+};
+
+&nfc {
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	nand@0 {
+		reg = <0>;
+		label = "rk-nand";
+		nand-bus-width = <8>;
+		nand-ecc-mode = "hw";
+		nand-ecc-step-size = <1024>;
+		nand-ecc-strength = <40>;
+		nand-is-boot-medium;
+		rockchip,boot-blks = <8>;
+		rockchip,boot-ecc-strength = <40>;
+	};
+};
+
+&pinctrl {
+	ap6210 {
+		bt_host_wake: bt-host-wake {
+			rockchip,pins = <0 RK_PA5 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+
+		bt_reg_on: bt-reg-on {
+			rockchip,pins = <3 RK_PC7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		/* pin hog to pull the reset high */
+		bt_rst: bt-rst {
+			rockchip,pins = <3 RK_PD1 RK_FUNC_GPIO &pcfg_output_high>;
+		};
+
+		bt_wake: bt-wake {
+			rockchip,pins = <3 RK_PC6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		wifi_host_wake: wifi-host-wake {
+			rockchip,pins = <3 RK_PD2 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+
+		wifi_reg_on: wifi-reg-on {
+			rockchip,pins = <3 RK_PD0 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	usb {
+		usb_int: usb-int {
+			rockchip,pins = <0 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+		otg_vbus_drv: otg-vbus-drv {
+			rockchip,pins = <3 RK_PD5 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
+&uart0 {
+	pinctrl-0 = <&uart0_xfer &uart0_cts &uart0_rts>;
+	uart-has-rtscts;
+	status = "okay";
+
+	bluetooth {
+		compatible = "brcm,bcm43438-bt";
+		device-wakeup-gpios = <&gpio3 RK_PC6 GPIO_ACTIVE_HIGH>;
+		host-wakeup-gpios = <&gpio0 RK_PA5 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&gpio3 RK_PC7 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_host_wake &bt_reg_on &bt_rst &bt_wake>;
+	};
+};
+
+&usbphy0 {
+        vbus-supply = <&vcc_otg>;
+};
