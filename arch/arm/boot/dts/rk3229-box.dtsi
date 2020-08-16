@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include "rk322x-box-dcdc.dtsi"
+#include "rk3229-cpu-opp.dtsi"
+
+/ {
+
+	model = "Rockchip RK3229 Box";
+	compatible = "rockchip,rk3229-box", "rockchip,rk3229";
+
+};

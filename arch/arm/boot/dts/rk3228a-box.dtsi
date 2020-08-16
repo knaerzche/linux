@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+
+#include "rk322x-box-dcdc.dtsi"
+
+/ {
+
+	model = "Rockchip RK3228A Box";
+	compatible = "rockchip,rk3228a-box", "rockchip,rk3229";
+
+};

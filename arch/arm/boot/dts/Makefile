@@ -981,7 +981,11 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3188-bqedison2qc.dtb \
 	rk3188-px3-evb.dtb \
 	rk3188-radxarock.dtb \
+	rk3228a-box.dtb \
+	rk3228a-box-h96mini.dtb \
 	rk3228-evb.dtb \
+	rk3229-box.dtb \
+	rk3229-box-a95xr1.dtb \
 	rk3229-evb.dtb \
 	rk3229-xms6.dtb \
 	rk3288-evb-act8846.dtb \

@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include "rk3229-box.dtsi"
+
+/ {
+	model = "Rockchip RK3229 Box A95X-R1";
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_blue {
+			gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+
+		led_red {
+			gpios = <&gpio1 RK_PA7 GPIO_ACTIVE_HIGH>;
+			default-state = "off";
+			linux,default-trigger = "rc-feedback";
+		};
+	};
+
+};
+
+&emmc {
+	mmc-hs200-1_8v;
+	status = "okay";
+};
+
+&gmac {
+	tx_delay = <0x26>;
+	rx_delay = <0x11>;
+};
+
+&ir_receiver {
+	status = "okay";
+};
+
+&power_key {
+	status = "okay";
+};
+
+&sdio {
+	status = "okay";
+};
+
+&sdmmc {
+	disable-wp;
+	status = "okay";
+};
+
+&usb_otg {
+	dr_mode = "host";
+};
