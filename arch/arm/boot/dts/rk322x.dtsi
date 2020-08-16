@@ -558,6 +558,11 @@
 						<&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
 						<&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
+				map2 {
+					trip = <&cpu_alert1>;
+					cooling-device =
+						<&gpu THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
 			};
 		};
 	};
@@ -613,7 +618,27 @@
 		clock-names = "bus", "core";
 		power-domains = <&power RK3228_PD_GPU>;
 		resets = <&cru SRST_GPU_A>;
-		status = "disabled";
+		operating-points-v2 = <&gpu_opp_table>;
+		#cooling-cells = <2>; /* min followed by max */
+	};
+
+	gpu_opp_table: opp-table2 {
+		compatible = "operating-points-v2";
+
+		opp-200000000 {
+			opp-hz = /bits/ 64 <200000000>;
+			opp-microvolt = <1050000>;
+		};
+
+		opp-300000000 {
+			opp-hz = /bits/ 64 <300000000>;
+			opp-microvolt = <1050000>;
+		};
+
+		opp-500000000 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-microvolt = <1150000>;
+		};
 	};
 
 	vpu: video-codec@20020000 {
