@@ -809,4 +809,11 @@
 			};
 		};
 	};
+
+	efuse: efuse@20090000 {
+		compatible = "rockchip,rk3036-efuse", "rockchip,rk3288-efuse";
+		reg = <0x20090000 0x20>;
+		clocks = <&cru PCLK_EFUSE>;
+		clock-names = "pclk_efuse";
+	};
 };
