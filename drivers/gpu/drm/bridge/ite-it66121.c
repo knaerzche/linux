@@ -72,6 +72,10 @@
 #define IT66121_AFE_XP_EC1_REG			0x68
 #define IT66121_AFE_XP_EC1_LOWCLK		BIT(4)
 
+#define IT66121_AFE_XP_PLL_CTRL		0x6a
+#define IT66121_AFE_XP_PLL_HIGH_CLK_MASK	(BIT(4) | BIT(5) | \
+						 BIT(6))
+
 #define IT66121_SW_RST_REG			0x04
 #define IT66121_SW_RST_REF			BIT(5)
 #define IT66121_SW_RST_AREF			BIT(4)
@@ -325,6 +329,13 @@ static int it66121_configure_afe(struct it66121_ctx *ctx,
 					IT66121_AFE_XP_EC1_LOWCLK, 0x80);
 		if (ret)
 			return ret;
+
+		ret = regmap_write_bits(ctx->regmap, IT66121_AFE_XP_PLL_CTRL,
+					 IT66121_AFE_XP_PLL_HIGH_CLK_MASK,
+					 IT66121_AFE_XP_PLL_HIGH_CLK_MASK);
+		if (ret)
+			return ret;
+
 	} else {
 		ret = regmap_write_bits(ctx->regmap, IT66121_AFE_XP_REG,
 					IT66121_AFE_XP_GAINBIT |
@@ -344,6 +355,13 @@ static int it66121_configure_afe(struct it66121_ctx *ctx,
 		ret = regmap_write_bits(ctx->regmap, IT66121_AFE_XP_EC1_REG,
 					IT66121_AFE_XP_EC1_LOWCLK,
 					IT66121_AFE_XP_EC1_LOWCLK);
+		if (ret)
+			return ret;
+
+
+		ret = regmap_write_bits(ctx->regmap, IT66121_AFE_XP_PLL_CTRL,
+					IT66121_AFE_XP_PLL_HIGH_CLK_MASK,
+					~(IT66121_AFE_XP_PLL_HIGH_CLK_MASK) & 0xff);
 		if (ret)
 			return ret;
 	}
