@@ -936,8 +936,11 @@ static int it66121_probe(struct i2c_client *client,
 	    ids[2] != IT66121_DEVICE_ID0 ||
 	    ((ids[3] & IT66121_DEVICE_MASK) != IT66121_DEVICE_ID1)) {
 		ite66121_power_off(ctx);
+		DRM_INFO("HDMITX it66121 could not be indentified.\n");
 		return -ENODEV;
-	}
+	} else
+		DRM_INFO("HDMITX it66121 rev %d succsessfully indentified.\n",
+		         ids[3] >> 4);
 
 	ctx->bridge.funcs = &it66121_bridge_funcs;
 	ctx->bridge.of_node = dev->of_node;
