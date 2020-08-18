@@ -443,7 +443,7 @@ static const struct it66121_conf it66121fn_conf_simple = {
 static void it66121_hw_reset(struct it66121_ctx *ctx)
 {
 	gpiod_set_value(ctx->gpio_reset, 1);
-	msleep(20);
+	msleep(50);
 	gpiod_set_value(ctx->gpio_reset, 0);
 }
 
