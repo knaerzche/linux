@@ -274,7 +274,7 @@ int rockchip_drm_endpoint_is_subdriver(struct device_node *ep)
 	pdev = of_find_device_by_node(node);
 	of_node_put(node);
 	if (!pdev)
-		return -ENODEV;
+		return false;
 
 	/*
 	 * All rockchip subdrivers have probed at this point, so
