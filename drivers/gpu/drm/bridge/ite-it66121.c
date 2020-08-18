@@ -218,21 +218,21 @@ struct it66121_ctx {
 
 static const struct regmap_range_cfg it66121_regmap_banks[] = {
 	{
-		.name = "it66121",
-		.range_min = 0x00,
-		.range_max = 0x1FF,
+		.name = "it66121-banks",
+		.range_min = 0x30,
+		.range_max = 0x1bf,
 		.selector_reg = IT66121_CLK_BANK_REG,
 		.selector_mask = 0x1,
 		.selector_shift = 0,
-		.window_start = 0x00,
-		.window_len = 0x130,
+		.window_start = 0x30,
+		.window_len = 0xcf,
 	},
 };
 
 static const struct regmap_config it66121_regmap_config = {
 	.val_bits = 8,
 	.reg_bits = 8,
-	.max_register = 0x1FF,
+	.max_register = 0x1bf,
 	.ranges = it66121_regmap_banks,
 	.num_ranges = ARRAY_SIZE(it66121_regmap_banks),
 };
