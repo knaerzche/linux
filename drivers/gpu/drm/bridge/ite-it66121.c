@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
+ * Copyright (C) 2020 Alex Bee <knaerzche@gmail.com>
  * Copyright (C) 2020 BayLibre, SAS
  * Author: Phong LE <ple@baylibre.com>
  * Copyright (C) 2018-2019, Artem Mygaiev
@@ -25,6 +26,9 @@
 #include <drm/drm_modes.h>
 #include <drm/drm_print.h>
 #include <drm/drm_probe_helper.h>
+
+#include <sound/asoundef.h>
+#include <sound/hdmi-codec.h>
 
 #define IT66121_MASTER_SEL_REG			0x10
 #define IT66121_MASTER_SEL_HOST			BIT(0)
@@ -245,9 +249,147 @@
 #define IT66121_EDID_FIFO_SIZE			32
 #define IT66121_AFE_CLK_HIGH			80000
 
+#define IT66121_AUD_CLK_CTRL_REG		0x58
+#define IT66121_AUD_AUT_IP_CLK		BIT(0)
+#define IT66121_AUD_AUT_OVR_SMPL_CLK		BIT(4)
+#define IT66121_AUD_EXT_MCLK_128FS		(0 << 2)
+#define IT66121_AUD_EXT_MCLK_256FS		BIT(2)
+#define IT66121_AUD_EXT_MCLK_512FS		(2 << 2)
+#define IT66121_AUD_EXT_MCLK_1024FS		(3 << 2)
+
+#define IT66121_AUD_INFO_REG_SZ		5
+#define IT66121_AUD_INFO_DB1_REG		0x168
+#define IT66121_AUD_INFO_DB2_REG		0x169
+#define IT66121_AUD_INFO_DB3_REG		0x16a
+#define IT66121_AUD_INFO_DB4_REG		0x16b
+#define IT66121_AUD_INFO_DB5_REG		0x16c
+#define IT66121_AUD_INFO_CSUM_REG		0x16d
+
+#define IT66121_AUD_INFO_PKT_REG		0xce
+#define IT66121_AUD_INFO_PKT_ON		BIT(0)
+#define IT66121_AUD_INFO_PKT_RPT		BIT(1)
+
+#define IT66121_AUD_PKT_N1_REG		0x133
+#define IT66121_AUD_PKT_N2_REG		0x134
+#define IT66121_AUD_PKT_N3_REG		0x135
+
+#define IT66121_AUD_PKT_CTS_MODE_REG		0xc5
+#define IT66121_AUD_PKT_CTS_MODE_USER		BIT(1)
+#define IT66121_AUD_PKT_CTS_MODE_AUTO_VAL	0
+#define IT66121_AUD_PKT_CTS1_REG		0x130
+#define IT66121_AUD_PKT_CTS2_REG		0x131
+#define IT66121_AUD_PKT_CTS3_REG		0x132
+#define IT66121_AUD_PKT_AUTO_CNT_CTS1_REG	0x135
+#define IT66121_AUD_PKT_AUTO_CNT_CTS2_REG	0x136
+#define IT66121_AUD_PKT_AUTO_CNT_CTS3_REG	0x137
+
+#define IT66121_AUD_CHST_MODE_REG		0x191
+#define IT66121_AUD_CHST_MODE_NLPCM		BIT(1)
+#define IT66121_AUD_CHST_CAT_REG		0x192
+#define IT66121_AUD_CHST_SRCNUM_REG		0x193
+#define IT66121_AUD_CHST_CHTNUM_REG		0x194
+#define IT66121_AUD_CHST_CA_FS_REG		0x198
+#define IT66121_AUD_CHST_OFS_WL_REG		0x199
+
+#define IT66121_AUD_CTRL0_REG			0xe0
+#define IT66121_AUD_SWL_16BIT			(0 << 6)
+#define IT66121_AUD_SWL_18BIT			BIT(6)
+#define IT66121_AUD_SWL_20BIT			(2 << 6)
+#define IT66121_AUD_SWL_24BIT			(3 << 6)
+#define IT66121_AUD_SWL_MASK			IT66121_AUD_SWL_24BIT
+#define IT66121_AUD_SPDIFTC			BIT(5)
+#define IT66121_AUD_SPDIF			BIT(4)
+#define IT66121_AUD_I2S			(0 << 4)
+#define IT66121_AUD_TYPE_MASK			IT66121_AUD_SPDIF
+#define IT66121_AUD_EN_I2S3			BIT(3)
+#define IT66121_AUD_EN_I2S2			BIT(2)
+#define IT66121_AUD_EN_I2S1			BIT(1)
+#define IT66121_AUD_EN_I2S0			BIT(0)
+#define IT66121_AUD_EN_I2S_MASK		0x0f
+#define IT66121_AUD_EN_SPDIF			1
+
+#define IT66121_AUD_CTRL1_REG			0xe1
+#define IT66121_AUD_FMT_STD_I2S		(0 << 0)
+#define IT66121_AUD_FMT_32BIT_I2S		BIT(0)
+#define IT66121_AUD_FMT_LEFT_JUSTIFY		(0 << 1)
+#define IT66121_AUD_FMT_RIGHT_JUSTIFY		BIT(1)
+#define IT66121_AUD_FMT_DELAY_1T_TO_WS	(0 << 2)
+#define IT66121_AUD_FMT_NO_DELAY_TO_WS	BIT(2)
+#define IT66121_AUD_FMT_WS0_LEFT		(0 << 3)
+#define IT66121_AUD_FMT_WS0_RIGHT		BIT(3)
+#define IT66121_AUD_FMT_MSB_SHIFT_FIRST	(0 << 4)
+#define IT66121_AUD_FMT_LSB_SHIFT_FIRST	BIT(4)
+#define IT66121_AUD_FMT_RISE_EDGE_SAMPLE_WS	(0 << 5)
+#define IT66121_AUD_FMT_FALL_EDGE_SAMPLE_WS	BIT(5)
+#define IT66121_AUD_FMT_FULLPKT		BIT(6)
+
+#define IT66121_AUD_FIFOMAP_REG		0xe2
+#define IT66121_AUD_FIFO3_SEL			6
+#define IT66121_AUD_FIFO2_SEL			4
+#define IT66121_AUD_FIFO1_SEL			2
+#define IT66121_AUD_FIFO0_SEL			0
+#define IT66121_AUD_FIFO_SELSRC3		3
+#define IT66121_AUD_FIFO_SELSRC2		2
+#define IT66121_AUD_FIFO_SELSRC1		1
+#define IT66121_AUD_FIFO_SELSRC0		0
+#define IT66121_AUD_FIFOMAP_DEFAULT		(IT66121_AUD_FIFO_SELSRC0 \
+						 << IT66121_AUD_FIFO0_SEL | \
+						 IT66121_AUD_FIFO_SELSRC1 \
+						   << IT66121_AUD_FIFO1_SEL | \
+						 IT66121_AUD_FIFO_SELSRC2 \
+						   << IT66121_AUD_FIFO2_SEL | \
+						 IT66121_AUD_FIFO_SELSRC3 \
+						   << IT66121_AUD_FIFO3_SEL)
+
+#define IT66121_AUD_CTRL3_REG			0xe3
+#define IT66121_AUD_MULCH			BIT(7)
+#define IT66121_AUD_ZERO_CTS			BIT(6)
+#define IT66121_AUD_CHSTSEL			BIT(4)
+#define IT66121_AUD_S3RLCHG			BIT(3)
+#define IT66121_AUD_S2RLCHG			BIT(2)
+#define IT66121_AUD_S1RLCHG			BIT(1)
+#define IT66121_AUD_S0RLCHG			BIT(0)
+#define IT66121_AUD_SRLCHG_MASK		0x0f
+#define IT66121_AUD_SRLCHG_DEFAULT		((~IT66121_AUD_S0RLCHG & \
+						 ~IT66121_AUD_S1RLCHG & \
+						 ~IT66121_AUD_S2RLCHG & \
+						 ~IT66121_AUD_S3RLCHG) & \
+						IT66121_AUD_SRLCHG_MASK)
+
+#define IT66121_AUD_SRC_VALID_FLAT_REG	0xe4
+#define IT66121_AUD_SPXFLAT_SRC3		BIT(7)
+#define IT66121_AUD_SPXFLAT_SRC2		BIT(6)
+#define IT66121_AUD_SPXFLAT_SRC1		BIT(5)
+#define IT66121_AUD_SPXFLAT_SRC0		BIT(4)
+#define IT66121_AUD_SPXFLAT_MASK		0xf0
+#define IT66121_AUD_SPXFLAT_SRC_ALL		(IT66121_AUD_SPXFLAT_SRC0 | \
+						 IT66121_AUD_SPXFLAT_SRC1 | \
+						 IT66121_AUD_SPXFLAT_SRC2 | \
+						 IT66121_AUD_SPXFLAT_SRC3)
+#define IT66121_AUD_ERR2FLAT			BIT(3)
+#define IT66121_AUD_S3VALID			BIT(2)
+#define IT66121_AUD_S2VALID			BIT(1)
+#define IT66121_AUD_S1VALID			BIT(0)
+
+#define IT66121_AUD_HDAUDIO_REG		0xe5
+#define IT66121_AUD_HBR			BIT(3)
+#define IT66121_AUD_DSD			BIT(1)
+
 struct it66121_conf {
 	unsigned int input_mode_reg;
 	unsigned int input_conversion_reg;
+};
+
+struct it66121_audio {
+	struct platform_device *pdev;
+	unsigned int sources;
+	unsigned int n;
+	unsigned int cts;
+	unsigned int format;
+	unsigned int sample_wl;
+	bool is_hbr;
+	struct hdmi_audio_infoframe audio_infoframe;
+	struct snd_aes_iec958 aes_iec958;
 };
 
 struct it66121_ctx {
@@ -260,6 +402,8 @@ struct it66121_ctx {
 	struct regulator_bulk_data supplies[3];
 	bool dual_edge;
 	const struct it66121_conf *conf;
+	bool sink_has_audio;
+	struct it66121_audio audio;
 	struct mutex lock; /* Protects fields below and device registers */
 	struct edid *edid;
 	struct hdmi_avi_infoframe hdmi_avi_infoframe;
@@ -610,6 +754,7 @@ static int it66121_connector_get_modes(struct drm_connector *connector)
 	}
 
 	num_modes = drm_add_edid_modes(connector, ctx->edid);
+	ctx->sink_has_audio = drm_detect_monitor_audio(ctx->edid);
 
 unlock:
 	mutex_unlock(&ctx->lock);
@@ -894,6 +1039,536 @@ static const struct drm_bridge_funcs it66121_bridge_funcs = {
 	.mode_set = it66121_bridge_mode_set,
 };
 
+/* Audio related functions */
+
+static int it66121_audio_reset_fifo(struct it66121_ctx *ctx)
+{
+	int ret;
+
+	ret = regmap_write_bits(ctx->regmap, IT66121_SW_RST_REG,
+				IT66121_SW_RST_AUD,
+				 IT66121_SW_RST_AUD);
+	if (ret)
+		return ret;
+
+	usleep_range(2000, 4000);
+
+	return regmap_write_bits(ctx->regmap, IT66121_SW_RST_REG,
+			  IT66121_SW_RST_AUD,
+			  ~(IT66121_SW_RST_AUD) & 0xff);
+}
+
+static int it66121_audio_set_infoframe(struct it66121_ctx *ctx)
+{
+	int i, ret;
+	u8 infoframe_buf[HDMI_INFOFRAME_SIZE(AUDIO)];
+
+	const u16 audioinfo_reg[IT66121_AUD_INFO_REG_SZ] = {
+		IT66121_AUD_INFO_DB1_REG,
+		IT66121_AUD_INFO_DB2_REG,
+		IT66121_AUD_INFO_DB3_REG,
+		IT66121_AUD_INFO_DB4_REG,
+		IT66121_AUD_INFO_DB5_REG
+	};
+
+	ret = hdmi_audio_infoframe_pack(&ctx->audio.audio_infoframe, infoframe_buf,
+					sizeof(infoframe_buf));
+	if (ret < 0) {
+		dev_err(ctx->dev, "%s: failed to pack audio infoframe: %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	for (i = 0; i < IT66121_AUD_INFO_REG_SZ; i++) {
+		ret = regmap_write(ctx->regmap, audioinfo_reg[i],
+				   infoframe_buf[i + HDMI_INFOFRAME_HEADER_SIZE]);
+		if (ret)
+			return ret;
+	}
+
+	/*
+	 * TODO: linux defines 10 bytes; currently only 5 are filled
+	 * if that ever changes checksum will differ since
+	 * it66121 takes max 5 bytes -> calc checksum here????
+	 */
+	ret = regmap_write(ctx->regmap, IT66121_AUD_INFO_CSUM_REG, infoframe_buf[3]);
+
+	if (ret)
+		return ret;
+
+	return regmap_write(ctx->regmap, IT66121_AUD_INFO_PKT_REG,
+			    IT66121_AUD_INFO_PKT_ON | IT66121_AUD_INFO_PKT_RPT);
+}
+
+static int it66121_audio_set_cts_n(struct it66121_ctx *ctx)
+{
+	int ret;
+
+	ret = regmap_write(ctx->regmap, IT66121_AUD_PKT_N1_REG,
+			   ctx->audio.n & 0xff);
+	if (ret)
+		return ret;
+	ret = regmap_write(ctx->regmap, IT66121_AUD_PKT_N2_REG,
+			   (ctx->audio.n >> 8) & 0xff);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap, IT66121_AUD_PKT_N3_REG,
+			   (ctx->audio.n >> 16) & 0xf);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap, IT66121_AUD_PKT_CTS1_REG,
+			   ctx->audio.cts & 0xff);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap, IT66121_AUD_PKT_CTS2_REG,
+			   (ctx->audio.cts >> 8) & 0xff);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap, IT66121_AUD_PKT_CTS3_REG,
+			   (ctx->audio.cts >> 16) & 0xf);
+	if (ret)
+		return ret;
+
+	/*
+	 * magic values ("password") have to be written to
+	 * f8 register to enable writing to IT66121_AUD_PKT_CTS_MODE_REG
+	 */
+
+	ret = regmap_write(ctx->regmap, 0xf8, 0xc3);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap, 0xf8, 0xa5);
+	if (ret)
+		return ret;
+
+	ret = regmap_write_bits(ctx->regmap,
+				IT66121_AUD_PKT_CTS_MODE_REG,
+				IT66121_AUD_PKT_CTS_MODE_USER,
+				ctx->audio.cts == IT66121_AUD_PKT_CTS_MODE_AUTO_VAL
+				  ? ~IT66121_AUD_PKT_CTS_MODE_USER & 0xff
+				  : IT66121_AUD_PKT_CTS_MODE_USER);
+	if (ret)
+		return ret;
+
+	/*
+	 * disabling write to IT66121_AUD_PKT_CTS_MODE_REG
+	 * again by overwriting perviously set "password"
+	 */
+	return regmap_write(ctx->regmap, 0xf8, 0xff);
+}
+
+static int it66121_audio_set_channel_status(struct it66121_ctx *ctx)
+{
+	int ret;
+	unsigned int val;
+
+	/* TODO: check: always use NLPCM - would to cover LPCM also?*/
+	val = IT66121_AUD_CHST_MODE_NLPCM;
+	val |= ctx->audio.aes_iec958.status[0] & IEC958_AES0_CON_NOT_COPYRIGHT
+		? BIT(3)
+		: (0 << 3);
+	val |= (ctx->audio.aes_iec958.status[0] & IEC958_AES0_CON_EMPHASIS) << 4;
+	ret = regmap_write(ctx->regmap,
+			   IT66121_AUD_CHST_MODE_REG,
+			   val);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap,
+			   IT66121_AUD_CHST_CAT_REG,
+			   ctx->audio.aes_iec958.status[1]);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap,
+			   IT66121_AUD_CHST_SRCNUM_REG,
+			   ctx->audio.aes_iec958.status[2] &
+			   IEC958_AES2_CON_SOURCE);
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap,
+			   IT66121_AUD_CHST_CHTNUM_REG,
+			   ((ctx->audio.aes_iec958.status[2] &
+			   IEC958_AES2_CON_CHANNEL) >> 4));
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap,
+			   IT66121_AUD_CHST_CA_FS_REG,
+			   (ctx->audio.aes_iec958.status[3] &
+			   IEC958_AES3_CON_CLOCK) << 2 |
+			   (ctx->audio.aes_iec958.status[3] &
+			   IEC958_AES3_CON_FS));
+	if (ret)
+		return ret;
+
+	return regmap_write(ctx->regmap,
+			    IT66121_AUD_CHST_OFS_WL_REG,
+			    ctx->audio.aes_iec958.status[4]);
+}
+
+static int it66121_audio_mute(struct it66121_ctx *ctx, bool enable)
+{
+	return regmap_write_bits(ctx->regmap, IT66121_AUD_CTRL0_REG,
+				 IT66121_AUD_EN_I2S_MASK,
+				 enable ? 0x0 : ctx->audio.sources);
+}
+
+static int it66121_audio_set_controls(struct it66121_ctx *ctx)
+{
+	int ret;
+
+	ret = regmap_write_bits(ctx->regmap, IT66121_AUD_CTRL0_REG,
+				IT66121_AUD_TYPE_MASK | IT66121_AUD_SWL_MASK,
+				IT66121_AUD_I2S | ctx->audio.sample_wl);
+
+	if (ret)
+		return ret;
+
+	ret = regmap_write(ctx->regmap, IT66121_AUD_CTRL1_REG,
+			   ctx->audio.format);
+	if (ret)
+		return ret;
+
+	/* default fifo mapping: fifo0 => source0, fifo1 => source1, ... */
+	ret = regmap_write(ctx->regmap, IT66121_AUD_FIFOMAP_REG,
+			   IT66121_AUD_FIFOMAP_DEFAULT);
+	if (ret)
+		return ret;
+
+	/* Do not swap R/L for any source */
+	ret = regmap_write_bits(ctx->regmap, IT66121_AUD_CTRL3_REG,
+				IT66121_AUD_SRLCHG_MASK,
+				IT66121_AUD_SRLCHG_DEFAULT);
+	if (ret)
+		return ret;
+
+	/* "unflat" all sources */
+	ret = regmap_write_bits(ctx->regmap,
+				IT66121_AUD_SRC_VALID_FLAT_REG,
+				IT66121_AUD_SPXFLAT_MASK,
+				~IT66121_AUD_SPXFLAT_SRC_ALL & 0xff);
+	if (ret)
+		return ret;
+
+	/* TODO: check if we really support HBR audio yet */
+	return regmap_write_bits(ctx->regmap, IT66121_AUD_HDAUDIO_REG,
+				 IT66121_AUD_HBR,
+				 ctx->audio.is_hbr
+				   ? IT66121_AUD_HBR
+				   : ~IT66121_AUD_HBR & 0xff);
+}
+
+static int it66121_audio_hw_params(struct device *dev, void *data,
+				   struct hdmi_codec_daifmt *daifmt,
+				   struct hdmi_codec_params *params)
+{
+	int ret;
+	unsigned int sources = 0;
+
+	struct it66121_ctx *ctx = dev_get_drvdata(dev);
+
+	if (!ctx->sink_has_audio) {
+		dev_err(ctx->dev, "%s: sink has no audio", __func__);
+		return -EINVAL;
+	}
+
+	/* for now i2s only */
+	if (daifmt->bit_clk_master | daifmt->frame_clk_master) {
+		dev_err(ctx->dev,
+			"%s: only clk_master and frame_clk_master formats are supported\n",
+			__func__);
+		return -EINVAL;
+	}
+
+	/* TODO: move all these switches in functions ? */
+	switch (daifmt->fmt) {
+	case HDMI_I2S:
+		ctx->audio.format = IT66121_AUD_FMT_32BIT_I2S;
+		break;
+	case HDMI_RIGHT_J:
+		ctx->audio.format = IT66121_AUD_FMT_RIGHT_JUSTIFY;
+		break;
+	case HDMI_LEFT_J:
+		ctx->audio.format = IT66121_AUD_FMT_LEFT_JUSTIFY;
+		break;
+	default:
+		dev_err(ctx->dev, "%s: unsupported daiformat: %u\n",
+			__func__, daifmt->fmt);
+		return -EINVAL;
+	}
+
+	switch (params->channels) {
+	case 7 ... 8:
+		ctx->audio.sources |= IT66121_AUD_EN_I2S3;
+		sources++;
+		fallthrough;
+	case 5 ... 6:
+		ctx->audio.sources |= IT66121_AUD_EN_I2S2;
+		sources++;
+		fallthrough;
+	case 3 ... 4:
+		ctx->audio.sources |= IT66121_AUD_EN_I2S1;
+		sources++;
+		fallthrough;
+	case 1 ... 2:
+		ctx->audio.sources |= IT66121_AUD_EN_I2S0;
+		sources++;
+		break;
+	default:
+		dev_err(ctx->dev, "%s: unsupported channel count: %d\n",
+			__func__, params->channels);
+		return -EINVAL;
+	}
+
+	switch (params->sample_width) {
+	case 16:
+		ctx->audio.sample_wl = IT66121_AUD_SWL_16BIT;
+		break;
+	case 18:
+		ctx->audio.sample_wl = IT66121_AUD_SWL_18BIT;
+		break;
+	case 20:
+		ctx->audio.sample_wl = IT66121_AUD_SWL_20BIT;
+		break;
+	case 24:
+	case 32:
+		/* assume 24 bit wordlength for 32 bit width */
+		ctx->audio.sample_wl = IT66121_AUD_SWL_24BIT;
+		break;
+	default:
+		dev_err(ctx->dev, "%s: unsupported sample width: %d\n",
+			__func__, params->channels);
+		return -EINVAL;
+	}
+
+	switch (params->sample_rate) {
+	case 32000:
+	case 48000:
+	case 96000:
+	case 192000:
+		ctx->audio.n = 128 * params->sample_rate / 1000;
+		ctx->audio.is_hbr = false;
+		break;
+	case 44100:
+	case 88200:
+	case 176400:
+		ctx->audio.n = 128 * params->sample_rate / 900;
+		ctx->audio.is_hbr = false;
+		break;
+	case 768000:
+		ctx->audio.n = 24576;
+		ctx->audio.is_hbr = true;
+		break;
+	default:
+	dev_err(ctx->dev, "%s: unsupported sample_rate: %d\n",
+		__func__, params->sample_rate);
+		return -EINVAL;
+	}
+
+	/* not all bits are correctly filled in snd_aes_iec958 - fill them here */
+	if ((params->iec.status[2] & IEC958_AES2_CON_SOURCE) == IEC958_AES2_CON_SOURCE_UNSPEC)
+		params->iec.status[2] |= sources;
+
+	if ((params->iec.status[2] & IEC958_AES2_CON_CHANNEL) == IEC958_AES2_CON_CHANNEL_UNSPEC)
+		params->iec.status[2] |= params->channels << 4;
+
+	/* OFs is 1-complement of Fs */
+	if ((params->iec.status[4] & IEC958_AES4_CON_ORIGFS) == IEC958_AES4_CON_ORIGFS_NOTID &&
+	    (params->iec.status[3] & IEC958_AES3_CON_FS) != IEC958_AES3_CON_FS_NOTID)
+		params->iec.status[4] |= (~(params->iec.status[3] & IEC958_AES3_CON_FS) & 0xf) << 4;
+
+	ctx->audio.format |= IT66121_AUD_FMT_FULLPKT;
+	ctx->audio.cts = IT66121_AUD_PKT_CTS_MODE_AUTO_VAL;
+	ctx->audio.audio_infoframe = params->cea;
+	ctx->audio.aes_iec958 = params->iec;
+
+	ret = it66121_audio_reset_fifo(ctx);
+	if (ret)
+		return ret;
+
+	ret = it66121_audio_set_infoframe(ctx);
+	if (ret) {
+		dev_err(ctx->dev,
+			"%s: failed to assemble/enable audio infoframe: %d\n",
+			__func__, ret);
+		/* TODO: Really fail here? */
+		return ret;
+	}
+
+	ret = it66121_audio_set_cts_n(ctx);
+	if (ret) {
+		dev_err(ctx->dev,
+			"%s: failed to write cts/n values: %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = it66121_audio_set_channel_status(ctx);
+	if (ret) {
+		dev_err(ctx->dev,
+			"%s: failed to write channel_status %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = it66121_audio_set_controls(ctx);
+	if (ret) {
+		dev_err(ctx->dev,
+			"%s: failed to write audio controls %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	return ret;
+}
+
+static void it66121_audio_shutdown(struct device *dev, void *data)
+{
+	struct it66121_ctx *ctx = dev_get_drvdata(dev);
+
+	regmap_write_bits(ctx->regmap, IT66121_SW_RST_REG,
+			  IT66121_SW_RST_AUD | IT66121_SW_RST_AREF,
+			  IT66121_SW_RST_AUD | IT66121_SW_RST_AREF);
+
+	regmap_write(ctx->regmap, IT66121_AUD_CLK_CTRL_REG, 0x0);
+
+	regmap_write_bits(ctx->regmap, IT66121_INT_MASK1_REG,
+			  IT66121_INT_MASK1_AUD_OVF,
+			  IT66121_INT_MASK1_AUD_OVF);
+
+	regmap_write_bits(ctx->regmap, IT66121_CLK_BANK_REG,
+			  IT66121_CLK_BANK_PWROFF_ACLK,
+			  IT66121_CLK_BANK_PWROFF_ACLK);
+
+	regmap_write_bits(ctx->regmap, IT66121_SW_RST_REG,
+			  IT66121_SW_RST_AUD | IT66121_SW_RST_AREF,
+			  ~(IT66121_SW_RST_AUD | IT66121_SW_RST_AREF) & 0xff);
+}
+
+static int it66121_audio_startup(struct device *dev, void *data)
+{
+	int ret;
+
+	struct it66121_ctx *ctx = dev_get_drvdata(dev);
+
+	ret = regmap_write_bits(ctx->regmap, IT66121_SW_RST_REG,
+				IT66121_SW_RST_AUD | IT66121_SW_RST_AREF,
+				IT66121_SW_RST_AUD | IT66121_SW_RST_AREF);
+	if (ret)
+		return ret;
+	/* TODO: check how to determine Fs at runtime -> only for spdif???*/
+	ret = regmap_write(ctx->regmap, IT66121_AUD_CLK_CTRL_REG,
+			   IT66121_AUD_AUT_OVR_SMPL_CLK |
+			   IT66121_AUD_EXT_MCLK_256FS);
+	if (ret)
+		return ret;
+
+	ret = regmap_write_bits(ctx->regmap, IT66121_CLK_BANK_REG,
+				IT66121_CLK_BANK_PWROFF_ACLK,
+				~IT66121_CLK_BANK_PWROFF_ACLK & 0xff);
+	if (ret)
+		return ret;
+
+	ret = regmap_write_bits(ctx->regmap, IT66121_INT_MASK1_REG,
+				IT66121_INT_MASK1_AUD_OVF,
+				~IT66121_INT_MASK1_AUD_OVF & 0xff);
+	if (ret)
+		return ret;
+
+	return regmap_write_bits(ctx->regmap, IT66121_SW_RST_REG,
+				 IT66121_SW_RST_AUD | IT66121_SW_RST_AREF,
+				  ~(IT66121_SW_RST_AUD | IT66121_SW_RST_AREF) & 0xff);
+}
+
+int it66121_audio_mute_stream(struct device *dev, void *data, bool enable,
+				int direction)
+{
+	struct it66121_ctx *ctx = dev_get_drvdata(dev);
+
+	return it66121_audio_mute(ctx, enable);
+}
+
+static int it66121_audio_get_dai_id(struct snd_soc_component *component,
+				    struct device_node *endpoint)
+{
+	struct of_endpoint of_ep;
+	int ret;
+
+	ret = of_graph_parse_endpoint(endpoint, &of_ep);
+	if (ret < 0)
+		return ret;
+
+	/*
+	 * HDMI sound should be located as reg = <2>
+	 * Then, it is sound port 0
+	 */
+	if (of_ep.port == 2)
+		return 0;
+
+	return -EINVAL;
+}
+
+static int it66121_audio_get_eld(struct device *dev, void *data,
+				 u8 *buf, size_t len)
+{
+	struct it66121_ctx *ctx = dev_get_drvdata(dev);
+
+	memcpy(buf, ctx->connector.eld,
+	       min(sizeof(ctx->connector.eld), len));
+
+	return 0;
+}
+
+static const struct hdmi_codec_ops it66121_audio_codec_ops = {
+	.audio_shutdown = it66121_audio_shutdown,
+	.audio_startup = it66121_audio_startup,
+	.mute_stream = it66121_audio_mute_stream,
+	.no_capture_mute = 1,
+	.hw_params = it66121_audio_hw_params,
+	.get_eld = it66121_audio_get_eld,
+	.get_dai_id = it66121_audio_get_dai_id,
+};
+
+static const struct hdmi_codec_pdata codec_data = {
+	.ops = &it66121_audio_codec_ops,
+	.i2s = 1, /* Only i2s support for now. */
+	.spdif = 0,
+	.max_i2s_channels = 8,
+};
+
+static int it66121_audio_codec_init(struct it66121_ctx *it66121,
+				    struct device *dev)
+{
+	struct it66121_ctx *ctx = dev_get_drvdata(dev);
+
+	ctx->audio.pdev = platform_device_register_data(
+			  dev, HDMI_CODEC_DRV_NAME, PLATFORM_DEVID_AUTO,
+			  &codec_data, sizeof(codec_data));
+
+	if (IS_ERR(ctx->audio.pdev))
+		return PTR_ERR(ctx->audio.pdev);
+
+	DRM_INFO("%s has been bound to to HDMITX it66121\n",
+		 HDMI_CODEC_DRV_NAME);
+
+	return 0;
+}
+
+static void it66121_audio_codec_exit(struct it66121_ctx *ctx)
+{
+	if (ctx->audio.pdev) {
+		platform_device_unregister(ctx->audio.pdev);
+		ctx->audio.pdev = NULL;
+	}
+}
+
 static irqreturn_t it66121_irq_threaded_handler(int irq, void *dev_id)
 {
 	int ret;
@@ -930,6 +1605,8 @@ static irqreturn_t it66121_irq_threaded_handler(int irq, void *dev_id)
 				}
 				event = true;
 			}
+			if (val & IT66121_INT_STATUS1_AUD_OVF)
+				it66121_audio_reset_fifo(ctx);
 		}
 
 		ret = regmap_read(ctx->regmap, IT66121_INT_STATUS3_REG, &val);
@@ -1042,6 +1719,12 @@ static int it66121_probe(struct i2c_client *client,
 
 	drm_bridge_add(&ctx->bridge);
 
+	ret = it66121_audio_codec_init(ctx, dev);
+	if (ret) {
+		dev_err(dev, "Failed to initialize audio codec %d\n", ret);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -1049,6 +1732,7 @@ static int it66121_remove(struct i2c_client *client)
 {
 	struct it66121_ctx *ctx = i2c_get_clientdata(client);
 
+	it66121_audio_codec_exit(ctx);
 	ite66121_power_off(ctx);
 	drm_bridge_remove(&ctx->bridge);
 	kfree(ctx->edid);
@@ -1086,6 +1770,7 @@ static struct i2c_driver it66121_driver = {
 
 module_i2c_driver(it66121_driver);
 
+MODULE_AUTHOR("Alex Bee");
 MODULE_AUTHOR("Phong LE");
 MODULE_DESCRIPTION("IT66121 HDMI transmitter driver");
 MODULE_LICENSE("GPL v2");
