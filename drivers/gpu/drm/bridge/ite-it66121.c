@@ -95,12 +95,30 @@
 #define IT66121_HDCP_EN1P1FEAT			BIT(1)
 
 #define IT66121_INT_STATUS1_REG			0x06
-#define IT66121_INT_STATUS1_AUD_OVF		BIT(7)
-#define IT66121_INT_STATUS1_DDC_NOACK		BIT(5)
-#define IT66121_INT_STATUS1_DDC_FIFOERR		BIT(4)
-#define IT66121_INT_STATUS1_DDC_BUSHANG		BIT(2)
-#define IT66121_INT_STATUS1_RX_SENS_STATUS	BIT(1)
-#define IT66121_INT_STATUS1_HPD_STATUS		BIT(0)
+#define IT66121_INT_STATUS1_AUD_OVF			BIT(7)
+#define IT66121_INT_STATUS1_DDC_NOACK			BIT(5)
+#define IT66121_INT_STATUS1_DDC_FIFOERR			BIT(4)
+#define IT66121_INT_STATUS1_DDC_BUSHANG			BIT(2)
+#define IT66121_INT_STATUS1_RX_SENS_STATUS		BIT(1)
+#define IT66121_INT_STATUS1_HPD_STATUS			BIT(0)
+
+#define IT66121_INT_STATUS2_REG			0x07
+#define IT66121_INT_STATUS2_PKT_3D			BIT(7)
+#define IT66121_INT_STATUS2_VID_UNSTABLE		BIT(6)
+#define IT66121_INT_STATUS2_PKT_ACP			BIT(5)
+#define IT66121_INT_STATUS2_PKT_NULL			BIT(4)
+#define IT66121_INT_STATUS2_PKT_GEN			BIT(3)
+#define IT66121_INT_STATUS2_CHK_KSV_LIST		BIT(2)
+#define IT66121_INT_STATUS2_AUTH_DONE			BIT(1)
+#define IT66121_INT_STATUS2_AUTH_FAIL			BIT(0)
+
+#define IT66121_INT_STATUS3_REG			0x08
+#define IT66121_INT_STATUS3_AUD_CTS			BIT(6)
+#define IT66121_INT_STATUS3_VSYNC			BIT(5)
+#define IT66121_INT_STATUS3_VID_STABLE			BIT(4)
+#define IT66121_INT_STATUS2_PKT_MPEG			BIT(3)
+#define IT66121_INT_STATUS3_PKT_AUD			BIT(1)
+#define IT66121_INT_STATUS3_PKT_AVI			BIT(0)
 
 #define IT66121_DDC_HEADER_REG			0x11
 #define IT66121_DDC_HEADER_HDCP			0x74
@@ -132,15 +150,42 @@
 #define IT66121_INT_MASK1_RX_SENS		BIT(1)
 #define IT66121_INT_MASK1_HPD			BIT(0)
 
+#define IT66121_INT_MASK2_REG			0x0a
+#define IT66121_INT_MASK2_PKT_AVI		BIT(7)
+#define IT66121_INT_MASK2_VID_UNSTABLE	BIT(6)
+#define IT66121_INT_MASK2_PKT_ACP		BIT(5)
+#define IT66121_INT_MASK2_PKT_NULL		BIT(4)
+#define IT66121_INT_MASK2_PKT_GEN		BIT(3)
+#define IT66121_INT_MASK2_CHK_KSV_LIST	BIT(2)
+#define IT66121_INT_MASK2_AUTH_DONE		BIT(1)
+#define IT66121_INT_MASK2_AUTH_FAIL		BIT(0)
+
+#define IT66121_INT_MASK3_REG			0x0b
+#define IT66121_INT_MASK3_PKT_3D		BIT(6)
+#define IT66121_INT_MASK3_AUD_CTS		BIT(5)
+#define IT66121_INT_MASK3_VSYNC		BIT(4)
+#define IT66121_INT_MASK3_VID_STABLE		BIT(3)
+#define IT66121_INT_MASK3_PKT_MPEG		BIT(2)
+#define IT66121_INT_MASK3_PKT_AUD		BIT(0)
+
 #define IT66121_INT_CLR1_REG			0x0C
-#define IT66121_INT_CLR1_PKTACP			BIT(7)
-#define IT66121_INT_CLR1_PKTNULL		BIT(6)
-#define IT66121_INT_CLR1_PKTGEN			BIT(5)
-#define IT66121_INT_CLR1_KSVLISTCHK		BIT(4)
-#define IT66121_INT_CLR1_AUTHDONE		BIT(3)
-#define IT66121_INT_CLR1_AUTHFAIL		BIT(2)
+#define IT66121_INT_CLR1_PKT_ACP			BIT(7)
+#define IT66121_INT_CLR1_PKT_NULL		BIT(6)
+#define IT66121_INT_CLR1_PKT_GEN			BIT(5)
+#define IT66121_INT_CLR1_CHK_KSV_LIST		BIT(4)
+#define IT66121_INT_CLR1_AUTH_DONE		BIT(3)
+#define IT66121_INT_CLR1_AUTH_FAIL		BIT(2)
 #define IT66121_INT_CLR1_RX_SENS		BIT(1)
 #define IT66121_INT_CLR1_HPD			BIT(0)
+
+#define IT66121_INT_CLR2_REG			0x0d
+#define IT66121_INT_CLR2_VSYNC		BIT(7)
+#define IT66121_INT_CLR2_VID_STABLE		BIT(6)
+#define IT66121_INT_CLR2_PKT_MPEG		BIT(5)
+#define IT66121_INT_CLR2_PKT_AUD		BIT(3)
+#define IT66121_INT_CLR2_PKT_AVI		BIT(2)
+#define IT66121_INT_CLR2_PKT_3D		BIT(1)
+#define IT66121_INT_CLR2_VID_UNSTABLE		BIT(0)
 
 #define IT66121_AV_MUTE_REG			0xC1
 #define IT66121_AV_MUTE_ON			BIT(0)
@@ -371,10 +416,9 @@ static int it66121_configure_afe(struct it66121_ctx *ctx,
 				IT66121_SW_RST_REF | IT66121_SW_RST_VID,
 				~(IT66121_SW_RST_REF | IT66121_SW_RST_VID) &
 				0xFF);
-	if (ret)
-		return ret;
 
-	return it66121_fire_afe(ctx);
+	return ret;
+
 }
 
 static inline int it66121_wait_ddc_ready(struct it66121_ctx *ctx)
@@ -711,6 +755,12 @@ static int it66121_bridge_attach(struct drm_bridge *bridge,
 		return ret;
 
 	/* Start interrupts */
+	ret = regmap_write_bits(ctx->regmap, IT66121_INT_MASK3_REG,
+				 IT66121_INT_MASK3_VID_STABLE,
+				 ~(IT66121_INT_MASK3_VID_STABLE) & 0xff);
+	if (ret)
+		return ret;
+
 	return regmap_write_bits(ctx->regmap, IT66121_INT_MASK1_REG,
 				 IT66121_INT_MASK1_DDC_NOACK |
 				 IT66121_INT_MASK1_HPD |
@@ -847,18 +897,18 @@ static const struct drm_bridge_funcs it66121_bridge_funcs = {
 static irqreturn_t it66121_irq_threaded_handler(int irq, void *dev_id)
 {
 	int ret;
-	unsigned int val;
+	unsigned int val, sys_status;
 	struct it66121_ctx *ctx = dev_id;
 	struct device *dev = ctx->dev;
 	bool event = false;
 
 	mutex_lock(&ctx->lock);
 
-	ret = regmap_read(ctx->regmap, IT66121_SYS_STATUS_REG, &val);
+	ret = regmap_read(ctx->regmap, IT66121_SYS_STATUS_REG, &sys_status);
 	if (ret)
 		goto unlock;
 
-	if (val & IT66121_SYS_STATUS_ACTIVE_IRQ) {
+	if (sys_status & IT66121_SYS_STATUS_ACTIVE_IRQ) {
 		ret = regmap_read(ctx->regmap, IT66121_INT_STATUS1_REG, &val);
 		if (ret) {
 			dev_err(dev, "Cannot read STATUS1_REG %d\n", ret);
@@ -879,6 +929,21 @@ static irqreturn_t it66121_irq_threaded_handler(int irq, void *dev_id)
 					ctx->edid = NULL;
 				}
 				event = true;
+			}
+		}
+
+		ret = regmap_read(ctx->regmap, IT66121_INT_STATUS3_REG, &val);
+		if (ret) {
+			dev_err(dev, "Cannot read STATUS3_REG %d\n", ret);
+		} else if (val) {
+			if (val & IT66121_INT_STATUS3_VID_STABLE) {
+				if (sys_status & IT66121_SYS_STATUS_VID_STABLE)
+					it66121_fire_afe(ctx);
+
+				regmap_write_bits(ctx->regmap,
+						  IT66121_INT_CLR2_REG,
+						  IT66121_INT_CLR2_VID_STABLE,
+						  IT66121_INT_CLR2_VID_STABLE);
 			}
 		}
 
