@@ -6,6 +6,7 @@
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/clock/rk3036-cru.h>
 #include <dt-bindings/soc/rockchip,boot-mode.h>
+#include <dt-bindings/power/rk3036-power.h>
 
 / {
 	#address-cells = <1>;
@@ -130,6 +131,7 @@
 		assigned-clock-rates = <100000000>;
 		clocks = <&cru SCLK_GPU>, <&cru SCLK_GPU>;
 		clock-names = "bus", "core";
+		power-domains = <&power RK3036_PD_GPU>;
 		resets = <&cru SRST_GPU>;
 		status = "disabled";
 	};
@@ -140,6 +142,7 @@
 		interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru ACLK_LCDC>, <&cru SCLK_LCDC>, <&cru HCLK_LCDC>;
 		clock-names = "aclk_vop", "dclk_vop", "hclk_vop";
+		power-domains = <&power RK3036_PD_VIO>;
 		resets = <&cru SRST_LCDC1_A>, <&cru SRST_LCDC1_H>, <&cru SRST_LCDC1_D>;
 		reset-names = "axi", "ahb", "dclk";
 		iommus = <&vop_mmu>;
@@ -162,8 +165,29 @@
 		interrupt-names = "vop_mmu";
 		clocks = <&cru ACLK_LCDC>, <&cru HCLK_LCDC>;
 		clock-names = "aclk", "iface";
+		power-domains = <&power RK3036_PD_VIO>;
 		#iommu-cells = <0>;
 		status = "disabled";
+	};
+
+	qos_gpu: qos@1012d000 {
+                compatible = "syscon";
+                reg = <0x1012d000 0x20>;
+        };
+
+	qos_vpu: qos@1012e000 {
+                compatible = "syscon";
+                reg = <0x1012e000 0x20>;
+        };
+
+	qos_hevc: qos@1012e080 {
+		compatible = "syscon";
+		reg = <0x1012e080 0x20>;
+	};
+
+	qos_vio: qos@1012f000 {
+		compatible = "syscon";
+		reg = <0x1012f000 0x20>;
 	};
 
 	gic: interrupt-controller@10139000 {
@@ -328,6 +352,35 @@
 			mode-recovery = <BOOT_RECOVERY>;
 			mode-bootloader = <BOOT_FASTBOOT>;
 			mode-loader = <BOOT_BL_DOWNLOAD>;
+		};
+
+		power: power-controller {
+			compatible = "rockchip,rk3036-power-controller";
+			#power-domain-cells = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			pd_vio@RK3036_PD_VIO {
+				reg = <RK3036_PD_VIO>;
+				clocks = <&cru ACLK_LCDC>,
+					 <&cru HCLK_LCDC>;
+				pm_qos = <&qos_vio>;
+
+			};
+			pd_gpu@RK3036_PD_GPU {
+				reg = <RK3036_PD_VPU>;
+				clocks = <&cru SCLK_GPU>;
+				pm_qos = <&qos_gpu>;
+			};
+			pd_vpu@RK3036_PD_VPU {
+				reg = <RK3036_PD_VPU>;
+				clocks = <&cru ACLK_VCODEC>,
+					 <&cru HCLK_VCODEC>,
+					 <&cru ACLK_HEVC>;
+				pm_qos = <&qos_vpu>,
+					 <&qos_hevc>;
+			};
+
 		};
 	};
 
