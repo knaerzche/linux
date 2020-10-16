@@ -714,6 +714,10 @@
 	};
 };
 
+&global_timer {
+	status = "disabled";
+};
+
 &gpu {
 	compatible = "rockchip,rk3066-mali", "arm,mali-400";
 	interrupts = <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>,
