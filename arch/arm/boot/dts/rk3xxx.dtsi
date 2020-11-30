@@ -99,6 +99,8 @@
 		reg = <0x10138000 0x1000>;
 		cache-unified;
 		cache-level = <2>;
+		prefetch-data = <1>;
+		prefetch-instr = <1>;
 	};
 
 	scu@1013c000 {
