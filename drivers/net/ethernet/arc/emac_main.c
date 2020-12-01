@@ -850,6 +850,62 @@ static const struct net_device_ops arc_emac_netdev_ops = {
 #endif
 };
 
+/**
+ * arc_emac_rtl8201f_phy_fixup
+ * @phydev: Pointer to phy_device structure.
+ *
+ * This function registers a fixup in case RTL8201F's phy
+ * clockout is used as reference for the mac interface
+ * and disable EEE, since emac can't handle it
+ */
+static int arc_emac_rtl8201f_phy_fixup(struct phy_device *phydev)
+{
+	unsigned int reg, curr_pg;
+	int err = 0;
+
+	curr_pg = phy_read(phydev, RTL_8201F_PG_SELECT_REG);
+	err = phy_write(phydev, RTL_8201F_PG_SELECT_REG, 4);
+	if (err)
+		goto out_err;
+	mdelay(10);
+
+	/* disable EEE */
+	reg = phy_read(phydev, RTL_8201F_PG4_EEE_REG);
+	reg &=  ~RTL_8201F_PG4_EEE_RX_QUIET_EN &
+		~RTL_8201F_PG4_EEE_TX_QUIET_EN &
+		~RTL_8201F_PG4_EEE_NWAY_EN &
+		~RTL_8201F_PG4_EEE_10M_CAP;
+	err = phy_write(phydev, RTL_8201F_PG4_EEE_REG, reg);
+	if (err)
+		goto out_err;
+
+	if (phydev->interface == PHY_INTERFACE_MODE_RMII) {
+		err = phy_write(phydev, RTL_8201F_PG_SELECT_REG, 7);
+		if (err)
+			goto out_err;
+		mdelay(10);
+
+		reg = phy_read(phydev, RTL_8201F_PG7_RMSR_REG);
+		err = phy_write(phydev, RTL_8201F_PG_SELECT_REG, 0);
+		if (err)
+			goto out_err;
+		mdelay(10);
+
+		if (!(reg & RTL_8201F_PG7_RMSR_CLK_DIR_IN)) {
+			/* disable powersave if phy's clock output is used */
+			reg = phy_read(phydev, RTL_8201F_PG0_PSMR_REG);
+			reg &= ~RTL_8201F_PG0_PSMR_PWRSVE_EN & 0xffff;
+			err = phy_write(phydev, RTL_8201F_PG0_PSMR_REG, reg);
+		}
+	}
+
+out_err:
+	phy_write(phydev, RTL_8201F_PG_SELECT_REG, curr_pg);
+	mdelay(10);
+
+	return err;
+};
+
 int arc_emac_probe(struct net_device *ndev, int interface)
 {
 	struct device *dev = ndev->dev.parent;
@@ -973,6 +1029,11 @@ int arc_emac_probe(struct net_device *ndev, int interface)
 		dev_err(dev, "failed to probe MII bus\n");
 		goto out_clken;
 	}
+
+	err = phy_register_fixup_for_uid(RTL_8201F_PHY_ID, 0xfffff0,
+					 arc_emac_rtl8201f_phy_fixup);
+	if (err)
+		dev_warn(dev, "Cannot register PHY board fixup.\n");
 
 	phydev = of_phy_connect(ndev, phy_node, arc_emac_adjust_link, 0,
 				interface);
