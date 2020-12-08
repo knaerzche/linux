@@ -59,7 +59,8 @@ rockchip_rgb_encoder_atomic_check(struct drm_encoder *encoder,
 		break;
 	}
 
-	s->output_type = DRM_MODE_CONNECTOR_LVDS;
+	s->output_type = connector->connector_type == DRM_MODE_CONNECTOR_Unknown
+				? DRM_MODE_CONNECTOR_LVDS : connector->connector_type;
 
 	return 0;
 }
