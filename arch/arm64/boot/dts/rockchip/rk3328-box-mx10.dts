@@ -1,0 +1,26 @@
+#include "rk3328-box.dtsi"
+
+/ {
+	model = "RK3328 Box MX10";
+
+	leds {
+		compatible = "gpio-leds";
+		power {
+			gpios = <&rk805 0 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "default-on";
+			default-state = "on";
+		};
+	};
+};
+
+&emmc {
+	mmc-hs200-1_8v;
+};
+
+&gmac2phy {
+	status = "okay";
+};
+
+&sdmmc_ext {
+	status = "okay";
+};

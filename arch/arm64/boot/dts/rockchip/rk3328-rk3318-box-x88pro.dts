@@ -1,0 +1,62 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+
+/dts-v1/;
+#include "rk3318-box.dtsi"
+
+/ {
+	model = "RK3318 X88 pro";
+
+	leds {
+		compatible = "gpio-leds";
+
+		power-blue {
+			gpios = <&gpio2 RK_PA6 GPIO_ACTIVE_LOW>;
+			linux,default-trigger = "none";
+			default-state = "on";
+		};
+	};
+
+};
+
+&emmc {
+	mmc-hs200-1_8v;
+};
+
+&gmac2phy {
+	status = "okay";
+};
+
+&io_domains {
+	vccio6-supply = <&vccio_1v8>;
+};
+
+&sdmmc_ext {
+	mmc-pwrseq = <&sdio_pwrseq>;
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	brcmf: wifi@0 {
+		compatible = "brcm,bcm4329-fmac";
+		reg = <0>;
+		interrupt-parent = <&gpio3>;
+		interrupts = <RK_PA1 GPIO_ACTIVE_HIGH>;
+		interrupt-names = "host-wake";
+		pinctrl-names = "default";
+		pinctrl-0 = <&wifi_host_wake_l>;
+	};
+
+};
+
+&uart0 {
+	status = "okay";
+
+	bluetooth {
+		compatible = "brcm,bcm4330-bt";
+		host-wakeup-gpios = <&gpio1 RK_PD2 GPIO_ACTIVE_HIGH>;
+		device-wakeup-gpios = <&gpio1 RK_PC7 GPIO_ACTIVE_HIGH>;
+		shutdown-gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&bt_reg_on_h &bt_host_wake_l &bt_wake_l>;
+	};
+};
