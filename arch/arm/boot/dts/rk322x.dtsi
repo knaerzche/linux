@@ -705,6 +705,12 @@
 		assigned-clock-rates = <300000000>, <300000000>;
 		iommus = <&vdec_mmu>;
 		power-domains = <&power RK3228_PD_RKVDEC>;
+		resets = <&cru SRST_RKVDEC_H>, <&cru SRST_RKVDEC_A>,
+		         <&cru SRST_RKVDEC_CORE>, <&cru SRST_RKVDEC_CABAC>,
+		         <&cru SRST_RKVDEC_NOC_A>, <&cru SRST_RKVDEC_NOC_H>;
+		reset-names = "video_h", "video_a",
+			      "video_core", "video_cabac",
+			      "niu_a", "niu_h";
 	};
 
 	vdec_mmu: iommu@20030480 {
