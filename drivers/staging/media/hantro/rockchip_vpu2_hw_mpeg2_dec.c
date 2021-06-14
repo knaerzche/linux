@@ -84,7 +84,7 @@
 #define PICT_FRAME         3
 
 static void
-rk3399_vpu_mpeg2_dec_set_quantization(struct hantro_dev *vpu,
+rockchip_vpu2_mpeg2_dec_set_quantisation(struct hantro_dev *vpu,
 				      struct hantro_ctx *ctx)
 {
 	struct v4l2_ctrl_mpeg2_quantization *quantization;
@@ -97,13 +97,13 @@ rk3399_vpu_mpeg2_dec_set_quantization(struct hantro_dev *vpu,
 }
 
 static void
-rk3399_vpu_mpeg2_dec_set_buffers(struct hantro_dev *vpu,
-				 struct hantro_ctx *ctx,
-				 struct vb2_buffer *src_buf,
-				 struct vb2_buffer *dst_buf,
-				 const struct v4l2_mpeg2_sequence *sequence,
-				 const struct v4l2_mpeg2_picture *picture,
-				 const struct v4l2_ctrl_mpeg2_slice_params *slice_params)
+rockchip_vpu2_mpeg2_dec_set_buffers(struct hantro_dev *vpu,
+				    struct hantro_ctx *ctx,
+				    struct vb2_buffer *src_buf,
+				    struct vb2_buffer *dst_buf,
+				    const struct v4l2_mpeg2_sequence *sequence,
+				    const struct v4l2_mpeg2_picture *picture,
+				    const struct v4l2_ctrl_mpeg2_slice_params *slice_params)
 {
 	dma_addr_t forward_addr = 0, backward_addr = 0;
 	dma_addr_t current_addr, addr;
@@ -157,7 +157,7 @@ rk3399_vpu_mpeg2_dec_set_buffers(struct hantro_dev *vpu,
 	vdpu_write_relaxed(vpu, backward_addr, VDPU_REG_REFER3_BASE);
 }
 
-int rk3399_vpu_mpeg2_dec_run(struct hantro_ctx *ctx)
+int rockchip_vpu2_mpeg2_dec_run(struct hantro_ctx *ctx)
 {
 	struct hantro_dev *vpu = ctx->dev;
 	struct vb2_v4l2_buffer *src_buf, *dst_buf;
@@ -243,11 +243,11 @@ int rk3399_vpu_mpeg2_dec_run(struct hantro_ctx *ctx)
 	      VDPU_REG_MV_ACCURACY_BWD(1);
 	vdpu_write_relaxed(vpu, reg, VDPU_SWREG(136));
 
-	rk3399_vpu_mpeg2_dec_set_quantization(vpu, ctx);
+	rockchip_vpu2_mpeg2_dec_set_quantisation(vpu, ctx);
 
-	rk3399_vpu_mpeg2_dec_set_buffers(vpu, ctx, &src_buf->vb2_buf,
-					 &dst_buf->vb2_buf,
-					 sequence, picture, slice_params);
+	rockchip_vpu2_mpeg2_dec_set_buffers(vpu, ctx, &src_buf->vb2_buf,
+					    &dst_buf->vb2_buf,
+					    sequence, picture, slice_params);
 
 	/* Kick the watchdog and start decoding */
 	hantro_end_prepare_run(ctx);
