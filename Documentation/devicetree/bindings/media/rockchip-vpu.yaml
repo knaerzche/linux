@@ -28,6 +28,9 @@ properties:
       - items:
           - const: rockchip,rk3228-vpu
           - const: rockchip,rk3399-vpu
+      - items:
+          - const: rockchip,px30-vpu
+          - const: rockchip,rk3399-vpu
 
   reg:
     maxItems: 1
