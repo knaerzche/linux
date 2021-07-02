@@ -9,6 +9,9 @@ static const struct flash_info id_collision_parts[] = {
 			     SECT_4K | SPI_NOR_DUAL_READ | SPI_NOR_QUAD_READ |
 			     SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB) },
 
+	/* XMC (Wuhan Xinxin Semiconductor Manufacturing Corp.) */
+	{ "xm25qh64c", INFO(0x204017, 0, 64 * 1024, 128, SPI_NOR_PARSE_SFDP) },
+
 	/* XTX (XTX Technology Limited) */
 	{ "xt25f128b", INFO(0x0b4018, 0, 64 * 1024, 256, SPI_NOR_PARSE_SFDP |
 			    SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB) },
