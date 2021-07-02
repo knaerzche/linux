@@ -15,6 +15,8 @@ static const struct flash_info id_collision_parts[] = {
 	/* XTX (XTX Technology Limited) */
 	{ "xt25f128b", INFO(0x0b4018, 0, 64 * 1024, 256, SPI_NOR_PARSE_SFDP |
 			    SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB) },
+	{ "xt25f32b", INFO(0x0b4016, 0, 64 * 1024, 64, SPI_NOR_PARSE_SFDP |
+			    SPI_NOR_HAS_LOCK | SPI_NOR_HAS_TB) },
 };
 
 const struct spi_nor_manufacturer spi_nor_manuf_id_collisions = {
