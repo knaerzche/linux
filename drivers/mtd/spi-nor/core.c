@@ -3195,7 +3195,10 @@ int spi_nor_scan(struct spi_nor *nor, const char *name,
 	/* Configure OTP parameters and ops */
 	spi_nor_otp_init(nor);
 
-	dev_info(dev, "%s (%lld Kbytes)\n", info->name,
+	if (!nor->name)
+		nor->name = info->name;
+
+	dev_info(dev, "%s (%lld Kbytes)\n", nor->name,
 			(long long)mtd->size >> 10);
 
 	dev_dbg(dev,
