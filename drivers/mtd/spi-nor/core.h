@@ -380,6 +380,10 @@ struct flash_info {
 					 * protection bits. Usually these will
 					 * power-up in a write-protected state.
 					 */
+#define SPI_NOR_PARSE_SFDP	BIT(23) /*
+					 * Flash initialized based on the SFDP
+					 * tables.
+					 */
 
 	const struct spi_nor_otp_organization otp_org;
 
