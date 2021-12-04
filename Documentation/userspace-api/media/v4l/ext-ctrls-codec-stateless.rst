@@ -649,10 +649,16 @@ Stateless Codec Control ID
         :c:type:`timeval` in struct :c:type:`v4l2_buffer` to a __u64.
     * - __u32
       - ``pic_num``
-      -
+      - For short term reference, this should match the derived value PicNum
+	(8-28) and for long term references it should match the derived value
+	LongTermPicNum (8-29). Note that pic_num is the same as FrameNumWrap
+	for frame decoding.
     * - __u16
       - ``frame_num``
-      -
+      - For short term references, this should match the frame_num value from
+	the slice header syntax (the driver will wrap the value if neeeded). For
+	long term references, this should be set to the value of
+	long_term_frame_idx describes in the dec_ref_pic_marking() syntax.
     * - __u8
       - ``fields``
       - Specifies how the DPB entry is referenced. See :ref:`Reference Fields <h264_ref_fields>`
