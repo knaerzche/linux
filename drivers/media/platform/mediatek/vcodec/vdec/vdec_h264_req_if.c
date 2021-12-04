@@ -442,9 +442,16 @@ static void update_dpb(const struct v4l2_ctrl_h264_decode_params *dec_param,
 /*
  * The firmware expects unused reflist entries to have the value 0x20.
  */
-static void fixup_ref_list(u8 *ref_list, size_t num_valid)
+static void get_ref_list(u8 *ref_list, struct v4l2_h264_reflist_builder *b)
 {
-	memset(&ref_list[num_valid], 0x20, 32 - num_valid);
+	u32 i;
+
+	/* FIXME mark the reference parity */
+	for (i = 0; i < b->num_valid; i++)
+		ref_list[i] = b->index;
+
+	for (; i < 32; i++)
+		ref_list[i] = 0x20;
 }
 
 static void get_vdec_decode_parameters(struct vdec_h264_slice_inst *inst)
@@ -478,9 +485,9 @@ static void get_vdec_decode_parameters(struct vdec_h264_slice_inst *inst)
 	v4l2_h264_build_p_ref_list(&reflist_builder, p0_reflist);
 	v4l2_h264_build_b_ref_lists(&reflist_builder, b0_reflist, b1_reflist);
 	/* Adapt the built lists to the firmware's expectations */
-	fixup_ref_list(p0_reflist, reflist_builder.num_valid);
-	fixup_ref_list(b0_reflist, reflist_builder.num_valid);
-	fixup_ref_list(b1_reflist, reflist_builder.num_valid);
+	get_ref_list(p0_reflist, reflist_builder);
+	get_ref_list(b0_reflist, reflist_builder);
+	get_ref_list(b1_reflist, reflist_builder);
 
 	memcpy(&inst->vsi_ctx.h264_slice_params, slice_param,
 	       sizeof(inst->vsi_ctx.h264_slice_params));
