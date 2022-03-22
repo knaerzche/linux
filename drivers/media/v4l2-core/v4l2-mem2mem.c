@@ -316,7 +316,7 @@ static void __v4l2_m2m_try_queue(struct v4l2_m2m_dev *m2m_dev,
 	}
 
 	if (m2m_ctx->job_flags & TRANS_QUEUED) {
-		dprintk("On job queue already\n");
+		dprintk("One job queue already\n");
 		goto job_unlock;
 	}
 
