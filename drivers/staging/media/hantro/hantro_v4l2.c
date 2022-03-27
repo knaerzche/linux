@@ -409,6 +409,30 @@ hantro_update_requires_request(struct hantro_ctx *ctx, u32 fourcc)
 	}
 }
 
+static void
+hantro_update_requires_hold_capture_buf(struct hantro_ctx *ctx, u32 fourcc)
+{
+	struct vb2_queue *vq;
+
+	vq = v4l2_m2m_get_vq(ctx->fh.m2m_ctx,
+			     V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE);
+
+	switch (fourcc) {
+	case V4L2_PIX_FMT_JPEG:
+	case V4L2_PIX_FMT_MPEG2_SLICE:
+	case V4L2_PIX_FMT_VP8_FRAME:
+	case V4L2_PIX_FMT_HEVC_SLICE:
+	case V4L2_PIX_FMT_VP9_FRAME:
+		vq->subsystem_flags &= ~(VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF);
+		break;
+	case V4L2_PIX_FMT_H264_SLICE:
+		vq->subsystem_flags |= VB2_V4L2_FL_SUPPORTS_M2M_HOLD_CAPTURE_BUF;
+		break;
+	default:
+		break;
+	}
+}
+
 static int hantro_set_fmt_out(struct hantro_ctx *ctx,
 			      struct v4l2_pix_format_mplane *pix_mp)
 {
@@ -472,6 +496,7 @@ static int hantro_set_fmt_out(struct hantro_ctx *ctx,
 	ctx->dst_fmt.quantization = pix_mp->quantization;
 
 	hantro_update_requires_request(ctx, pix_mp->pixelformat);
+	hantro_update_requires_hold_capture_buf(ctx, pix_mp->pixelformat);
 
 	vpu_debug(0, "OUTPUT codec mode: %d\n", ctx->vpu_src_fmt->codec_mode);
 	vpu_debug(0, "fmt - w: %d, h: %d\n",
@@ -554,6 +579,80 @@ vidioc_s_fmt_cap_mplane(struct file *file, void *priv, struct v4l2_format *f)
 	return hantro_set_fmt_cap(fh_to_ctx(priv), &f->fmt.pix_mp);
 }
 
+static int vidioc_g_selection(struct file *file, void *priv,
+			      struct v4l2_selection *sel)
+{
+	struct hantro_ctx *ctx = fh_to_ctx(priv);
+
+	/* Crop only supported on source. */
+	if (!ctx->is_encoder ||
+	    sel->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+		return -EINVAL;
+
+	switch (sel->target) {
+	case V4L2_SEL_TGT_CROP_DEFAULT:
+	case V4L2_SEL_TGT_CROP_BOUNDS:
+		sel->r.top = 0;
+		sel->r.left = 0;
+		sel->r.width = ctx->src_fmt.width;
+		sel->r.height = ctx->src_fmt.height;
+		break;
+	case V4L2_SEL_TGT_CROP:
+		sel->r.top = 0;
+		sel->r.left = 0;
+		sel->r.width = ctx->dst_fmt.width;
+		sel->r.height = ctx->dst_fmt.height;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int vidioc_s_selection(struct file *file, void *priv,
+			      struct v4l2_selection *sel)
+{
+	struct hantro_ctx *ctx = fh_to_ctx(priv);
+	struct v4l2_rect *rect = &sel->r;
+	struct vb2_queue *vq;
+
+	/* Crop only supported on source. */
+	if (!ctx->is_encoder ||
+	    sel->type != V4L2_BUF_TYPE_VIDEO_OUTPUT)
+		return -EINVAL;
+
+	/* Change not allowed if the queue is streaming. */
+	vq = v4l2_m2m_get_src_vq(ctx->fh.m2m_ctx);
+	if (vb2_is_streaming(vq))
+		return -EBUSY;
+
+	if (sel->target != V4L2_SEL_TGT_CROP)
+		return -EINVAL;
+
+	/*
+	 * We do not support offsets, and we can crop only inside
+	 * right-most or bottom-most macroblocks.
+	 */
+	if (rect->left != 0 || rect->top != 0 ||
+	    round_up(rect->width, MB_DIM) != ctx->src_fmt.width ||
+	    round_up(rect->height, MB_DIM) != ctx->src_fmt.height) {
+		/* Default to full frame for incorrect settings. */
+		rect->left = 0;
+		rect->top = 0;
+		rect->width = ctx->src_fmt.width;
+		rect->height = ctx->src_fmt.height;
+	} else {
+		/* We support widths aligned to 4 pixels and arbitrary heights. */
+		rect->width = round_up(rect->width, 4);
+	}
+
+	ctx->dst_fmt.width = rect->width;
+	ctx->dst_fmt.height = rect->height;
+
+	return 0;
+}
+
 const struct v4l2_ioctl_ops hantro_ioctl_ops = {
 	.vidioc_querycap = vidioc_querycap,
 	.vidioc_enum_framesizes = vidioc_enum_framesizes,
@@ -580,6 +679,9 @@ const struct v4l2_ioctl_ops hantro_ioctl_ops = {
 
 	.vidioc_streamon = v4l2_m2m_ioctl_streamon,
 	.vidioc_streamoff = v4l2_m2m_ioctl_streamoff,
+
+	.vidioc_g_selection = vidioc_g_selection,
+	.vidioc_s_selection = vidioc_s_selection,
 };
 
 static int

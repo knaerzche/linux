@@ -43,15 +43,6 @@ struct hantro_aux_buf {
 	unsigned long attrs;
 };
 
-/**
- * struct hantro_jpeg_enc_hw_ctx
- *
- * @bounce_buffer:	Bounce buffer
- */
-struct hantro_jpeg_enc_hw_ctx {
-	struct hantro_aux_buf bounce_buffer;
-};
-
 /* Max. number of entries in the DPB (HW limitation). */
 #define HANTRO_H264_DPB_SIZE		16
 
@@ -78,9 +69,9 @@ struct hantro_h264_dec_ctrls {
  * @b1:		B1 reflist
  */
 struct hantro_h264_dec_reflists {
-	u8 p[HANTRO_H264_DPB_SIZE];
-	u8 b0[HANTRO_H264_DPB_SIZE];
-	u8 b1[HANTRO_H264_DPB_SIZE];
+	struct v4l2_h264_reference p[V4L2_H264_REF_LIST_LEN];
+	struct v4l2_h264_reference b0[V4L2_H264_REF_LIST_LEN];
+	struct v4l2_h264_reference b1[V4L2_H264_REF_LIST_LEN];
 };
 
 /**
@@ -100,6 +91,7 @@ struct hantro_h264_dec_hw_ctx {
 	struct hantro_h264_dec_ctrls ctrls;
 	u32 dpb_longterm;
 	u32 dpb_valid;
+	s32 cur_poc;
 };
 
 /**
@@ -299,6 +291,8 @@ enum hantro_enc_fmt {
 	ROCKCHIP_VPU_ENC_FMT_UYVY422 = 3,
 };
 
+extern const struct hantro_variant imx8mm_vpu_g1_variant;
+extern const struct hantro_variant imx8mq_vpu_g1_variant;
 extern const struct hantro_variant imx8mq_vpu_g2_variant;
 extern const struct hantro_variant imx8mq_vpu_variant;
 extern const struct hantro_variant px30_vpu_variant;
@@ -327,8 +321,6 @@ void hantro_g1_reset(struct hantro_ctx *ctx);
 
 int hantro_h1_jpeg_enc_run(struct hantro_ctx *ctx);
 int rockchip_vpu2_jpeg_enc_run(struct hantro_ctx *ctx);
-int hantro_jpeg_enc_init(struct hantro_ctx *ctx);
-void hantro_jpeg_enc_exit(struct hantro_ctx *ctx);
 void hantro_h1_jpeg_enc_done(struct hantro_ctx *ctx);
 void rockchip_vpu2_jpeg_enc_done(struct hantro_ctx *ctx);
 
